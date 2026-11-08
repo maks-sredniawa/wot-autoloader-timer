@@ -425,26 +425,20 @@ class GunCoolingTest(_StubbedGameTest):
         self.addCleanup(self.mod.fini)
         self.events.onAvatarReady()
 
-    def set_gun(self, state, temperature=0.0, cooling_time=-1.0, overheated=False, unlock_time=-1.0):
+    def set_gun(self, state, temperature=0.0, cooling_time=-1.0, overheated=False):
         temperature_state = _Obj(state=state, currentTemperature=temperature,
                                  getCoolingTime=lambda target: cooling_time if target == 0.0 else None)
         params = _Obj(coolingDelay=2.0, coolingPerSec=10.0)
-        overheat_state = _Obj(isOverheated=overheated, overheatTimeLeft=lambda _: unlock_time)
+        overheat_state = _Obj(isOverheated=overheated)
         self.mechanics['overheat'] = _Obj(getMechanicState=lambda: overheat_state)
         self.mechanics['temperature'] = _Obj(getMechanicState=lambda: temperature_state,
                                              getComponentParams=lambda: params)
         self.callbacks[-1]()
         return self.guiflash.components['maksforgeAutoloaderTimer']
 
-    def test_locked_gun_shows_time_until_it_can_fire(self):
-        label = self.set_gun(self.COOLING, 90.0, cooling_time=30.0, overheated=True, unlock_time=7.34)
-        self.assertTrue(label['visible'])
-        self.assertIn("<font color='#FCAF1A'>LOCKED 7.3</font>", label['text'])
-        self.assertEqual(label['text'].count('<font color'), 1)
-
-    def test_locked_gun_without_a_cooling_time_shows_no_number(self):
-        label = self.set_gun(self.HEATING, 100.0, overheated=True, unlock_time=-1.0)
-        self.assertIn("<font color='#FCAF1A'>LOCKED</font>", label['text'])
+    def test_locked_gun_hides_the_line(self):
+        self.set_gun(self.COOLING_DELAY, 40.0, cooling_time=12.4)
+        self.assertFalse(self.set_gun(self.COOLING, 90.0, cooling_time=30.0, overheated=True)['visible'])
 
     def test_warm_gun_shows_time_until_cold_then_damage_of_the_shots_left(self):
         label = self.set_gun(self.COOLING_DELAY, 40.0, cooling_time=12.4)
@@ -480,7 +474,7 @@ class GunCoolingTest(_StubbedGameTest):
         self.assertFalse(self.set_gun(self.IDLE)['visible'])
 
     def test_reload_command_stays_the_games_own(self):
-        self.set_gun(self.COOLING, 90.0, overheated=True, unlock_time=7.3)
+        self.set_gun(self.COOLING, 90.0, overheated=True)
         chat_ctrl = sys.modules['gui.battle_control.controllers.chat_cmd_ctrl'].ChatCommandsController
         del chat_ctrl.sent[:]
         chat_ctrl().sendReloadingCommand()

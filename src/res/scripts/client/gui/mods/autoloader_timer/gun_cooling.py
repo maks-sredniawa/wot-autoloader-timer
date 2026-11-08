@@ -8,7 +8,6 @@ from vehicles.mechanics.mechanic_helpers import getMechanicFromMechanicsParams, 
 
 from . import schedule
 
-LOCKED = 'locked'
 WARM = 'warm'
 COLD = 'cold'
 
@@ -50,12 +49,9 @@ def read_status(ammo):
         return None
     overheat = getPlayerVehicleMechanicComponent(VehicleMechanicKeys.OVERHEAT_GUN)
     temperature = getPlayerVehicleMechanicComponent(VehicleMechanicKeys.TEMPERATURE_GUN)
-    if overheat is None or temperature is None:
+    if overheat is None or temperature is None or overheat.getMechanicState().isOverheated:
         return None
-    overheat_state = overheat.getMechanicState()
     temperature_state = temperature.getMechanicState()
-    if overheat_state.isOverheated:
-        return GunStatus(LOCKED, overheat_state.overheatTimeLeft(temperature_state))
     seconds = _seconds_until_cold(temperature_state, temperature.getComponentParams())
     state = WARM if seconds > 0 else COLD
     return GunStatus(state, max(0.0, seconds), _potential_damage(ammo, temperature_state))

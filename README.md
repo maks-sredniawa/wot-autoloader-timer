@@ -21,9 +21,9 @@ Tanks whose whole magazine reloads at once show the shells left and their potent
 
 The Ares line has no magazine: every shot heats the gun, and too much heat locks it. On these tanks the same line shows how long the gun needs to cool down and how much damage you can still deal before it locks:
 
-- **LOCKED 7.3** in amber: the gun is overheated and can fire again in 7.3 s.
 - **8.4   560** while warm: the gun can fire and is fully cold in 8.4 s if you stop shooting, including the delay before cooling starts. The last number is the damage of the shots left before it locks.
 - **960** in green: the gun is cold and this is the damage of a full burst.
+- While the gun is locked the line is hidden, because the game shows its own lockout timer.
 
 The damage is shots left × the average damage of the loaded shell, as if every shell penetrates. It's capped by the shells you have left.
 
