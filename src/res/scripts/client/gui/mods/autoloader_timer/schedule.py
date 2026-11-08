@@ -23,6 +23,10 @@ class Slot(object):
         return 'Slot(%d, %s, %.2f, %.2f)' % (self.number, self.state, self.own_time, self.ready_in)
 
 
+def shell_damage(ammo):
+    return ammo.getGunSettings().getShellDescriptor(ammo.getCurrentShellCD()).armorDamage[0]
+
+
 def shell_load_time(reload_times, clip_size, shells_in_clip, factor):
     """Seconds to load the next shell when `shells_in_clip` are already loaded.
 

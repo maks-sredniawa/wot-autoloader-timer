@@ -6,7 +6,8 @@ from constants import TEMPERATURE_GUN_STATE
 from items.vehicle_mechanics_types import VehicleMechanicKeys
 from vehicles.mechanics.mechanic_helpers import getMechanicFromMechanicsParams, getPlayerVehicleMechanicComponent
 
-LOCKED = 'locked'
+from . import schedule
+
 WARM = 'warm'
 COLD = 'cold'
 
@@ -31,8 +32,7 @@ def _seconds_until_cold(temperature, params):
 
 
 def _potential_damage(ammo, temperature):
-    shell_cd = ammo.getCurrentShellCD()
-    if shell_cd is None:
+    if ammo.getCurrentShellCD() is None:
         return None
     gun = ammo.getGunSettings()
     shots = shots_until_lock(temperature.currentTemperature,
@@ -41,7 +41,7 @@ def _potential_damage(ammo, temperature):
     shells_left = ammo.getCurrentShells()[0]
     if shells_left >= 0:
         shots = min(shots, shells_left)
-    return int(round(shots * gun.getShellDescriptor(shell_cd).armorDamage[0]))
+    return int(round(shots * schedule.shell_damage(ammo)))
 
 
 def read_status(ammo):
@@ -49,12 +49,9 @@ def read_status(ammo):
         return None
     overheat = getPlayerVehicleMechanicComponent(VehicleMechanicKeys.OVERHEAT_GUN)
     temperature = getPlayerVehicleMechanicComponent(VehicleMechanicKeys.TEMPERATURE_GUN)
-    if overheat is None or temperature is None:
+    if overheat is None or temperature is None or overheat.getMechanicState().isOverheated:
         return None
-    overheat_state = overheat.getMechanicState()
     temperature_state = temperature.getMechanicState()
-    if overheat_state.isOverheated:
-        return GunStatus(LOCKED, overheat_state.overheatTimeLeft(temperature_state))
     seconds = _seconds_until_cold(temperature_state, temperature.getComponentParams())
     state = WARM if seconds > 0 else COLD
     return GunStatus(state, max(0.0, seconds), _potential_damage(ammo, temperature_state))

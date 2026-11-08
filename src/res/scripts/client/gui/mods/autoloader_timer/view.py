@@ -9,26 +9,37 @@ SEPARATOR = '   '
 _SHADOW = {'color': 0x000000, 'alpha': 0.8, 'blurX': 2, 'blurY': 2, 'strength': 2, 'quality': 2}
 
 
-def format_segments(slots, settings):
+def _magazine_summary(loaded, size, shell_damage, color):
+    summary = [('%d/%d' % (loaded, size), color)]
+    if loaded > 0:
+        summary.append(('%d' % round(loaded * shell_damage), color))
+    return summary
+
+
+def format_segments(slots, settings, shell_damage):
     colors = settings['colors']
     loaded = sum(1 for slot in slots if slot.state == schedule.LOADED)
-    count = '%d/%d' % (loaded, len(slots))
     if loaded == len(slots):
         times = [('%.1f' % time, colors['shellTime']) for time in sorted(slot.own_time for slot in slots)]
-        return times + [(count, colors['loaded'])]
+        return times + _magazine_summary(loaded, len(slots), shell_damage, colors['loaded'])
     segments = []
     for slot in slots:
         if slot.state == schedule.LOADING:
             segments.append(('%.1f' % max(0.0, slot.ready_in), colors['loading']))
         elif slot.state == schedule.QUEUED:
             segments.append(('%.1f' % max(0.0, slot.ready_in), colors['queued']))
-    return segments + [(count, colors['count'])]
+    return segments + _magazine_summary(loaded, len(slots), shell_damage, colors['count'])
+
+
+def format_magazine(loaded, size, shell_damage, settings):
+    colors = settings['colors']
+    if loaded == 0:
+        return [('0/%d' % size, colors['loading'])]
+    return _magazine_summary(loaded, size, shell_damage, colors['loaded'] if loaded == size else colors['count'])
 
 
 def format_cooling(status, settings):
     colors = settings['colors']
-    if status.state == gun_cooling.LOCKED:
-        return [('LOCKED %.1f' % status.seconds if status.seconds >= 0 else 'LOCKED', colors['loading'])]
     is_cold = status.state == gun_cooling.COLD
     segments = [] if is_cold else [('%.1f' % status.seconds, colors['shellTime'])]
     if status.potential_damage is not None:
