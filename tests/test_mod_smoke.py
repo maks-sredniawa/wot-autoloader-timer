@@ -65,6 +65,8 @@ class FakeAmmo(object):
         self.gun.hasAutoReload = lambda: True
         self.gun.hasShellChangeFactor = lambda: True
         self.gun.getShellChangeFactor = lambda: 0.5
+        self.gun.isRegularClip = False
+        self.gun.getShellDescriptor = lambda _: _Obj(armorDamage=(100.0, 100.0))
         self.shell_change_time = 0.0
         self.shells = (30, 1)
         self.clip_state = FakeState(4.0, 11.7)
@@ -241,7 +243,8 @@ class ModSmokeTest(_StubbedGameTest):
         self.events.onAvatarReady()
         text = self.label()['text']
         self.assertTrue(self.label()['visible'])
-        self.assertTrue(text.endswith("<font color='#D8D8D8'>1/3</font></font>"))
+        self.assertIn("<font color='#D8D8D8'>1/3</font>", text)
+        self.assertTrue(text.endswith("<font color='#D8D8D8'>100</font></font>"))
         self.assertIn("<font color='#FCAF1A'>4.0</font>", text)
         self.assertEqual((self.label()['x'], self.label()['y']), (0, -35))
         self.assertIn("<font color='#D8D8D8'>14.8</font>", text)
@@ -262,7 +265,8 @@ class ModSmokeTest(_StubbedGameTest):
         self.ammo.shell_change_time = 6.75
         self.callbacks[-1]()
         text = self.label()['text']
-        self.assertTrue(text.endswith("<font color='#C7FE48'>3/3</font></font>"))
+        self.assertIn("<font color='#C7FE48'>3/3</font>", text)
+        self.assertTrue(text.endswith("<font color='#C7FE48'>300</font></font>"))
         self.assertLess(text.index('>10.8<'), text.index('>11.7<'))
         self.assertLess(text.index('>11.7<'), text.index('>13.5<'))
         chat_ctrl.cooldown = False
@@ -346,6 +350,64 @@ class ReloadChatTest(_StubbedGameTest):
         self.chat_ctrl.broadcast_fails = True
         self.assertEqual(self.press_reload(), ['game reload command'])
         self.assertEqual(logged, [RuntimeError])
+
+
+class MagazineDamageTest(_StubbedGameTest):
+
+    def setUp(self):
+        super(MagazineDamageTest, self).setUp()
+        self.mod = importlib.import_module('gui.mods.mod_autoloader_timer')
+        self.mod.init()
+        self.addCleanup(self.mod.fini)
+        self.events.onAvatarReady()
+
+    def use_regular_magazine(self):
+        self.ammo.gun.hasAutoReload = lambda: False
+        self.ammo.gun.isRegularClip = True
+        self.ammo.gun.clip.size = 6
+        self.ammo.gun.getShellDescriptor = lambda _: _Obj(armorDamage=(390.0, 390.0))
+
+    def render(self, total, in_clip):
+        self.ammo.shells = (total, in_clip)
+        self.callbacks[-1]()
+        return self.guiflash.components['maksforgeAutoloaderTimer']
+
+    def test_partial_regular_magazine_shows_count_then_damage_in_grey(self):
+        self.use_regular_magazine()
+        text = self.render(20, 4)['text']
+        self.assertLess(text.index("<font color='#D8D8D8'>4/6</font>"),
+                        text.index("<font color='#D8D8D8'>1560</font>"))
+
+    def test_full_regular_magazine_is_green(self):
+        self.use_regular_magazine()
+        text = self.render(20, 6)['text']
+        self.assertIn("<font color='#C7FE48'>6/6</font>", text)
+        self.assertIn("<font color='#C7FE48'>2340</font>", text)
+
+    def test_empty_regular_magazine_shows_amber_count_without_damage(self):
+        self.use_regular_magazine()
+        text = self.render(20, 0)['text']
+        self.assertIn("<font color='#FCAF1A'>0/6</font>", text)
+        self.assertEqual(text.count('<font color'), 1)
+
+    def test_regular_magazine_with_no_shells_left_hides_the_line(self):
+        self.use_regular_magazine()
+        self.assertFalse(self.render(0, 0)['visible'])
+
+    def test_hide_when_full_hides_a_full_regular_magazine_only(self):
+        self.use_regular_magazine()
+        self.mod._timer.settings['hideWhenFull'] = True
+        self.assertFalse(self.render(20, 6)['visible'])
+        self.assertTrue(self.render(20, 5)['visible'])
+
+    def test_empty_autoreloader_shows_no_damage(self):
+        self.ammo.clip_state = FakeState(4.0, 11.7)
+        text = self.render(30, 0)['text']
+        self.assertTrue(text.endswith("<font color='#D8D8D8'>0/3</font></font>"))
+
+    def test_single_shot_gun_stays_hidden(self):
+        self.ammo.gun.hasAutoReload = lambda: False
+        self.assertFalse(self.render(30, 1)['visible'])
 
 
 class GunCoolingTest(_StubbedGameTest):

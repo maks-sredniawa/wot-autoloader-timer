@@ -3,14 +3,19 @@
 A World of Tanks mod that shows the load time of **every shell** in an autoreloader magazine (Italian tanks and any other gun with the `autoreload` mechanic), not just the one that's loading now.
 
 ```
-4.5   16.2   26.7   35.5   1/4
+4.5   16.2   26.7   35.5   1/4   390
 ```
 
 - **Each number**: seconds until that shell is ready, counted from now. The amber one is loading now.
-- **1/4** at the end: shells in the magazine now.
-- When the magazine is full it shows each shell's own load time at your current reload speed in grey, fastest first, then **3/3** in green, for example `10.8   11.7   13.5   3/3`.
+- **1/4**: shells in the magazine now.
+- **390** at the end: potential damage of those shells, as if every one penetrates.
+- When the magazine is full it shows each shell's own load time at your current reload speed in grey, fastest first, then **3/3** and the damage in green, for example `10.8   11.7   13.5   3/3   1170`.
 
 The times always use your current reload speed. They're recalculated every 0.1 s from the reload time the server sends for the shell being loaded, so a damaged ammo rack, stun, or a crew member knocked out changes them right away. The rest of the magazine is predicted from the gun's per-shell reload table at that same speed.
+
+## Regular autoloaders
+
+Tanks whose whole magazine reloads at once show the shells left and their potential damage: `4/6   1560`, in green when full (`6/6   2340`). While the magazine reloads it reads `0/6` in amber.
 
 ## Ares tanks
 

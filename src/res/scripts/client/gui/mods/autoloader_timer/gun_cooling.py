@@ -6,6 +6,8 @@ from constants import TEMPERATURE_GUN_STATE
 from items.vehicle_mechanics_types import VehicleMechanicKeys
 from vehicles.mechanics.mechanic_helpers import getMechanicFromMechanicsParams, getPlayerVehicleMechanicComponent
 
+from . import schedule
+
 LOCKED = 'locked'
 WARM = 'warm'
 COLD = 'cold'
@@ -31,8 +33,7 @@ def _seconds_until_cold(temperature, params):
 
 
 def _potential_damage(ammo, temperature):
-    shell_cd = ammo.getCurrentShellCD()
-    if shell_cd is None:
+    if ammo.getCurrentShellCD() is None:
         return None
     gun = ammo.getGunSettings()
     shots = shots_until_lock(temperature.currentTemperature,
@@ -41,7 +42,7 @@ def _potential_damage(ammo, temperature):
     shells_left = ammo.getCurrentShells()[0]
     if shells_left >= 0:
         shots = min(shots, shells_left)
-    return int(round(shots * gun.getShellDescriptor(shell_cd).armorDamage[0]))
+    return int(round(shots * schedule.shell_damage(ammo)))
 
 
 def read_status(ammo):

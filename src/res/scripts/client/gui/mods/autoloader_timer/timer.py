@@ -7,7 +7,7 @@ from helpers import dependency
 from skeletons.gui.battle_session import IBattleSessionProvider
 
 from . import config, gun_cooling, schedule
-from .view import PanelView, format_cooling, format_segments
+from .view import PanelView, format_cooling, format_magazine, format_segments
 
 TICK_SECONDS = 0.1
 
@@ -109,10 +109,27 @@ class AutoloaderTimer(object):
     def _segments(self):
         slots = self.slots()
         if slots is None:
-            return self._cooling_segments()
+            return self._no_autoreload_segments()
         if self._settings['hideWhenFull'] and all(slot.state == schedule.LOADED for slot in slots):
             return None
-        return format_segments(slots, self._settings)
+        return format_segments(slots, self._settings, schedule.shell_damage(self._sessionProvider.shared.ammo))
+
+    def _no_autoreload_segments(self):
+        ammo = self._sessionProvider.shared.ammo
+        if ammo is not None and ammo.getGunSettings().isRegularClip:
+            return self._magazine_segments(ammo)
+        return self._cooling_segments()
+
+    def _magazine_segments(self, ammo):
+        if ammo.getCurrentShellCD() is None:
+            return None
+        shells_total, shells_in_clip = ammo.getCurrentShells()
+        if shells_in_clip < 0 or max(shells_total, shells_in_clip) <= 0:
+            return None
+        clip_size = ammo.getGunSettings().clip.size
+        if self._settings['hideWhenFull'] and shells_in_clip == clip_size:
+            return None
+        return format_magazine(shells_in_clip, clip_size, schedule.shell_damage(ammo), self._settings)
 
     def _cooling_segments(self):
         status = gun_cooling.read_status(self._sessionProvider.shared.ammo)
