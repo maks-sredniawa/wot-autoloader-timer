@@ -1,7 +1,7 @@
 from gui.mods.gambiter import g_guiFlash
 from gui.mods.gambiter.flash import COMPONENT_ALIGN, COMPONENT_EVENT, COMPONENT_TYPE
 
-from . import schedule
+from . import gun_cooling, schedule
 
 ALIAS = 'maksforgeAutoloaderTimer'
 SEPARATOR = '   '
@@ -23,6 +23,17 @@ def format_segments(slots, settings):
         elif slot.state == schedule.QUEUED:
             segments.append(('%.1f' % max(0.0, slot.ready_in), colors['queued']))
     return segments + [(count, colors['count'])]
+
+
+def format_cooling(status, settings):
+    colors = settings['colors']
+    if status.state == gun_cooling.LOCKED:
+        return [('LOCKED %.1f' % status.seconds if status.seconds >= 0 else 'LOCKED', colors['loading'])]
+    is_cold = status.state == gun_cooling.COLD
+    segments = [] if is_cold else [('%.1f' % status.seconds, colors['shellTime'])]
+    if status.potential_damage is not None:
+        segments.append(('%d' % status.potential_damage, colors['loaded'] if is_cold else colors['count']))
+    return segments
 
 
 class PanelView(object):

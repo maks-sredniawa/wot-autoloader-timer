@@ -6,8 +6,8 @@ from debug_utils import LOG_CURRENT_EXCEPTION
 from helpers import dependency
 from skeletons.gui.battle_session import IBattleSessionProvider
 
-from . import config, schedule
-from .view import PanelView, format_segments
+from . import config, gun_cooling, schedule
+from .view import PanelView, format_cooling, format_segments
 
 TICK_SECONDS = 0.1
 
@@ -109,10 +109,16 @@ class AutoloaderTimer(object):
     def _segments(self):
         slots = self.slots()
         if slots is None:
-            return None
+            return self._cooling_segments()
         if self._settings['hideWhenFull'] and all(slot.state == schedule.LOADED for slot in slots):
             return None
         return format_segments(slots, self._settings)
+
+    def _cooling_segments(self):
+        status = gun_cooling.read_status(self._sessionProvider.shared.ammo)
+        if status is None or (self._settings['hideWhenFull'] and status.state == gun_cooling.COLD):
+            return None
+        return format_cooling(status, self._settings)
 
     def slots(self):
         ammo = self._sessionProvider.shared.ammo
