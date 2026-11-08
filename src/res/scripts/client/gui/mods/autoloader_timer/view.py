@@ -28,7 +28,7 @@ def format_segments(slots, settings):
 def format_cooling(status, settings):
     colors = settings['colors']
     if status.state == gun_cooling.LOCKED:
-        return [('LOCKED %.1f' % status.seconds, colors['loading'])]
+        return [('LOCKED %.1f' % status.seconds if status.seconds >= 0 else 'LOCKED', colors['loading'])]
     is_cold = status.state == gun_cooling.COLD
     segments = [] if is_cold else [('%.1f' % status.seconds, colors['shellTime'])]
     if status.potential_damage is not None:

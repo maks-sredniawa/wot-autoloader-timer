@@ -17,7 +17,7 @@ The times always use your current reload speed. They're recalculated every 0.1 s
 The Ares line has no magazine: every shot heats the gun, and too much heat locks it. On these tanks the same line shows how long the gun needs to cool down and how much damage you can still deal before it locks:
 
 - **LOCKED 7.3** in amber: the gun is overheated and can fire again in 7.3 s.
-- **12.4   560** while warm: the gun can fire and is fully cold in 12.4 s if you stop shooting, including the delay before cooling starts. The last number is the damage of the shots left before it locks.
+- **8.4   560** while warm: the gun can fire and is fully cold in 8.4 s if you stop shooting, including the delay before cooling starts. The last number is the damage of the shots left before it locks.
 - **960** in green: the gun is cold and this is the damage of a full burst.
 
 The damage is shots left × the average damage of the loaded shell, as if every shell penetrates. It's capped by the shells you have left.
@@ -52,7 +52,7 @@ The first battle writes `mods/configs/autoloader_timer/config.json`:
 | `fontSize` | `14` | Text size |
 | `hideWhenFull` | `false` | Hide the panel while the magazine is full or an Ares gun is cold |
 | `reloadChatLine` | `true` | Replace the reload quick command with the magazine status line in autoreloaders |
-| `colors` | | Hex colours for the count, a full magazine, the loading shell, the queued shells and the per-shell times |
+| `colors` | | Hex colours for the count, a full magazine, the loading shell, the queued shells and the per-shell times. The Ares line reuses them. |
 
 To move the panel, hold Ctrl to show the cursor and drag it. The new position is saved.
 

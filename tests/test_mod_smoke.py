@@ -380,6 +380,10 @@ class GunCoolingTest(_StubbedGameTest):
         self.assertIn("<font color='#FCAF1A'>LOCKED 7.3</font>", label['text'])
         self.assertEqual(label['text'].count('<font color'), 1)
 
+    def test_locked_gun_without_a_cooling_time_shows_no_number(self):
+        label = self.set_gun(self.HEATING, 100.0, overheated=True, unlock_time=-1.0)
+        self.assertIn("<font color='#FCAF1A'>LOCKED</font>", label['text'])
+
     def test_warm_gun_shows_time_until_cold_then_damage_of_the_shots_left(self):
         label = self.set_gun(self.COOLING_DELAY, 40.0, cooling_time=12.4)
         self.assertTrue(label['visible'])
