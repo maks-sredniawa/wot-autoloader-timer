@@ -12,6 +12,18 @@ A World of Tanks mod that shows the load time of **every shell** in an autoreloa
 
 The times always use your current reload speed. They're recalculated every 0.1 s from the reload time the server sends for the shell being loaded, so a damaged ammo rack, stun, or a crew member knocked out changes them right away. The rest of the magazine is predicted from the gun's per-shell reload table at that same speed.
 
+## Ares tanks
+
+The Ares line has no magazine: every shot heats the gun, and too much heat locks it. On these tanks the same line shows how long the gun needs to cool down and how much damage you can still deal before it locks:
+
+- **LOCKED 7.3** in amber: the gun is overheated and can fire again in 7.3 s.
+- **12.4   560** while warm: the gun can fire and is fully cold in 12.4 s if you stop shooting, including the delay before cooling starts. The last number is the damage of the shots left before it locks.
+- **960** in green: the gun is cold and this is the damage of a full burst.
+
+The damage is shots left × the average damage of the loaded shell, as if every shell penetrates. It's capped by the shells you have left.
+
+The reload quick command stays the game's own on these tanks, and it already reports the overheat time.
+
 ## Reload quick command
 
 In an autoreloader, the reload quick command (its own key, or Z → "I'm reloading") sends one team chat line with the whole magazine instead of the game's line, which only knows about the next shell:
@@ -38,7 +50,7 @@ The first battle writes `mods/configs/autoloader_timer/config.json`:
 | `enabled` | `true` | Turns the mod off without uninstalling it |
 | `x`, `y` | `0`, `60` | Offset from the crosshair, which the line follows frame by frame across arcade, sniper and arty views |
 | `fontSize` | `14` | Text size |
-| `hideWhenFull` | `false` | Hide the panel while the magazine is full |
+| `hideWhenFull` | `false` | Hide the panel while the magazine is full or an Ares gun is cold |
 | `reloadChatLine` | `true` | Replace the reload quick command with the magazine status line in autoreloaders |
 | `colors` | | Hex colours for the count, a full magazine, the loading shell, the queued shells and the per-shell times |
 
