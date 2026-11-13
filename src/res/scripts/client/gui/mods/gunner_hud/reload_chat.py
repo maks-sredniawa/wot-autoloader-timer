@@ -44,9 +44,9 @@ def magazine_text(slots):
     if loaded == 0:
         if not pending:
             return None
-        return 'Reloading! First shell %d s, %s' % (_seconds(pending[0].ready_in),
-                                                     _last_shell_text(slots, loaded, pending))
-    text = 'Ready to fire! Magazine %d/%d' % (loaded, len(slots))
+        return 'Magazine 0/%d, first shell %d s, %s' % (len(slots), _seconds(pending[0].ready_in),
+                                                         _last_shell_text(slots, loaded, pending))
+    text = 'Magazine %d/%d' % (loaded, len(slots))
     if pending:
         text += ', ' + _last_shell_text(slots, loaded, pending)
     return text
@@ -64,11 +64,10 @@ def install(get_slots):
         return bool(text) and team_chat.try_send(text)
 
     def sendReloadingCommand(self):
+        original(self)
         try:
-            if send_magazine_status():
-                return
+            send_magazine_status()
         except Exception:
             LOG_CURRENT_EXCEPTION()
-        original(self)
 
     ChatCommandsController.sendReloadingCommand = sendReloadingCommand

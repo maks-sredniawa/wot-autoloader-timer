@@ -1,6 +1,6 @@
 <root>
 	<id>maksforge.gunner_hud</id>
-	<version>0.6.0</version>
+	<version>0.6.1</version>
 	<name>Gunner HUD</name>
 	<description>Shows the load time of every shell in an autoreloader magazine, the shells left and their potential damage on magazine tanks, the cooldown and damage left before the gun locks on Ares tanks, and an aim timer that also shows the dual accuracy cooldown of the Type 71 line.</description>
 </root>
