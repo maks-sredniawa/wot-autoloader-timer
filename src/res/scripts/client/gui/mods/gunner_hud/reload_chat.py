@@ -53,12 +53,12 @@ def magazine_text(slots):
     return text
 
 
-def install(get_slots):
+def install(get_slots, is_on):
     original = ChatCommandsController.sendReloadingCommand
     team_chat = _TeamChat()
 
     def send_magazine_status():
-        if not avatar_getter.isPlayerOnArena() or not avatar_getter.isVehicleAlive():
+        if not is_on() or not avatar_getter.isPlayerOnArena() or not avatar_getter.isVehicleAlive():
             return False
         slots = get_slots()
         text = magazine_text(slots) if slots else None
