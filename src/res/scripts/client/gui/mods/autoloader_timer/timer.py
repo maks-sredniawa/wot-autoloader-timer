@@ -137,10 +137,11 @@ class AutoloaderTimer(object):
 
     def _on_crosshair_changed(self, *_):
         try:
-            anchor = self._crosshair_offset(self._crosshair)
-            self._view.set_anchor(*anchor)
+            x, y = self._crosshair_offset(self._crosshair)
+            view_id = self._crosshair.getViewID()
+            self._view.set_anchor(x, y, view_id)
             if self._aim_view is not None:
-                self._aim_view.set_anchor(anchor[0], anchor[1], self._crosshair.getViewID())
+                self._aim_view.set_anchor(x, y, view_id)
         except Exception:
             LOG_CURRENT_EXCEPTION()
 

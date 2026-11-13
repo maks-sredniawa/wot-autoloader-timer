@@ -167,6 +167,7 @@ def _install_stubs(guiflash, ammo, crosshair, player_events, callbacks, mechanic
     battle_control = module('gui.battle_control', avatar_getter=module(
         'gui.battle_control.avatar_getter', isPlayerOnArena=lambda: True, isVehicleAlive=lambda: True))
     battle_control.__path__ = []
+    module('gui.battle_control.battle_constants', CROSSHAIR_VIEW_ID=_Obj(ARCADE=1, SNIPER=2, STRATEGIC=3))
     controllers = module('gui.battle_control.controllers')
     controllers.__path__ = []
 
@@ -311,6 +312,34 @@ class ModSmokeTest(_StubbedGameTest):
 
         mod.fini()
         self.assertEqual(self.crosshair_handlers(new), [[], [], [], []])
+
+    def switch_view(self, view_id):
+        self.crosshair.view_id = view_id
+        self.crosshair.onCrosshairViewChanged(view_id)
+
+    def drag_panel(self, x, y):
+        self.label().update(x=x, y=y)
+        sys.modules['gui.mods.gambiter.flash'].COMPONENT_EVENT.UPDATED('maksforgeAutoloaderTimer', {'x': x, 'y': y})
+
+    def test_panel_uses_the_arcade_position_in_sniper_view_until_dragged_there(self):
+        mod = importlib.import_module("gui.mods.mod_autoloader_timer")
+        mod.init()
+        self.addCleanup(mod.fini)
+        self.crosshair.position = (1280, 720)
+        self.events.onAvatarReady()
+        self.switch_view(2)
+        self.assertEqual(self.label_position(), (0, 60))
+        self.assertNotIn('sniper', mod._timer.settings)
+
+        self.drag_panel(40, 200)
+        self.assertEqual(mod._timer.settings['sniper'], {'x': 40, 'y': 200})
+        self.assertEqual((mod._timer.settings['x'], mod._timer.settings['y']), (0, 60))
+        self.assertEqual(sys.modules['gui.mods.autoloader_timer.config'].load()['sniper'], {'x': 40, 'y': 200})
+
+        self.switch_view(1)
+        self.assertEqual(self.label_position(), (0, 60))
+        self.switch_view(2)
+        self.assertEqual(self.label_position(), (40, 200))
 
 
 def _slots(*states_and_times):

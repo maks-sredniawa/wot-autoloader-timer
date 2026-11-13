@@ -4,6 +4,7 @@ from gui.mods.gambiter import g_guiFlash
 from gui.mods.gambiter.flash import COMPONENT_ALIGN, COMPONENT_EVENT, COMPONENT_TYPE
 
 from . import aim
+from .view import dragged_offset, view_offset
 
 # GUIFlash creates battle components in alphabetical order of alias, which is also their stacking order.
 _PREFIX = 'maksforgeAimTimer'
@@ -32,9 +33,6 @@ _LABEL_OFFSETS = {
     PERCENT: (0, TRACK_SIZE[1] // 2 + LABEL_GAP),
 }
 _DRAGGABLE = (TRACK, SECONDS, PERCENT)
-SNIPER_VIEW = 2
-STRATEGIC_VIEW = 3
-_VIEW_POSITIONS = {SNIPER_VIEW: 'sniper', STRATEGIC_VIEW: 'strategic'}
 
 
 def _image(name):
@@ -156,12 +154,8 @@ class AimBarView(object):
         html = "<font face='$FieldFont' size='%d' color='#%s'>%s</font>" % (size, color, text)
         self._update(alias, {'visible': True, 'text': html, 'x': position[0], 'y': position[1]})
 
-    def _offset(self):
-        settings = self._settings['aimTimer']
-        return settings.get(_VIEW_POSITIONS.get(self._view_id), settings)
-
     def _center(self):
-        offset = self._offset()
+        offset = view_offset(self._settings['aimTimer'], self._view_id)
         return (self._anchor[0] + offset['x'], self._anchor[1] + offset['y'])
 
     def _label_position(self, alias):
@@ -185,7 +179,7 @@ class AimBarView(object):
             return
         dx, dy = _LABEL_OFFSETS.get(alias, (0, 0))
         self._shown[alias].update(x=props['x'], y=props['y'])
-        offset = self._offset()
+        offset = dragged_offset(self._settings['aimTimer'], self._view_id)
         offset['x'] = int(props['x']) - dx - self._anchor[0]
         offset['y'] = int(props['y']) - dy - self._anchor[1]
         self._on_moved()

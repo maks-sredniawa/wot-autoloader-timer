@@ -43,7 +43,7 @@ On guns with dual accuracy, the circle gets much smaller once the gun has cooled
 
 - **100%** is the hot gun fully aimed, as on any tank. A tick on the bar marks it.
 - **The part above the tick** is the extra the cooled gun gives. It is solid grey while the gun cools after a shot, with the seconds until it has cooled next to it, and empty once the gun has cooled.
-- **Aiming past 100%** fills that part in cyan. The percentage keeps counting up to the gun's real gain: the hot circle divided by the cooled one, 167% on the Type 71 (0.40 against 0.24).
+- **Aiming past 100%** fills that part in cyan. The percentage keeps counting up to the gun's real gain, the hot circle divided by the cooled one, which the mod reads from the gun itself: 173% on the Type 71.
 - **A full bar with no seconds left** is the best shot the gun can make.
 
 The game doesn't tell the client how long the cooldown is after crew skills, so the first countdown of a battle uses the gun's base delay. After one full cycle the mod counts with the delay it measured. The countdown starts when the server switches the accurate mode off, so ping shifts it slightly.
@@ -72,14 +72,14 @@ The first battle writes `mods/configs/autoloader_timer/config.json`:
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `enabled` | `true` | Turns the mod off without uninstalling it |
-| `x`, `y` | `0`, `60` | Offset from the crosshair, which the line follows frame by frame across arcade, sniper and arty views |
+| `x`, `y` | `0`, `60` | The panel's offset from the crosshair, which it follows frame by frame. Once you drag the panel in sniper or artillery view, a `sniper` or `strategic` key with its own `x`, `y` appears; until then that view uses these arcade values. |
 | `fontSize` | `14` | Text size |
 | `hideWhenFull` | `false` | Hide the panel while the magazine is full or an Ares gun is cold |
 | `reloadChatLine` | `true` | Replace the reload quick command with the magazine status line in autoreloaders |
 | `aimTimer` | | `enabled` (`true`) shows the aim timer. `x`, `y` (`150`, `0`) are its offset from the crosshair in arcade view; `sniper` (`120`, `60`) and `strategic` (`180`, `70`) hold the offsets for the zoomed and artillery views. |
 | `colors` | | Hex colours for the count, a full magazine, the loading shell, the queued shells, and the per-shell times. The Ares line and the aim timer's text reuse them. The bar's own colours are built in. |
 
-To move the panel or the aim timer, hold Ctrl to show the cursor and drag it (the aim timer by its bar, seconds or percentage). The new position is saved. The aim timer keeps a separate position for arcade, sniper and artillery view, so drag it once in each.
+To move the panel or the aim timer, hold Ctrl to show the cursor and drag it (the aim timer by its bar, seconds or percentage). The new position is saved. The panel and the aim timer each keep a separate position for arcade, sniper and artillery view, so drag them once in each.
 
 ## Build
 
