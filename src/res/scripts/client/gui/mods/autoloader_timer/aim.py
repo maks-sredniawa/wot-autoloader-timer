@@ -45,10 +45,11 @@ def _ratio(ideal, current):
 
 
 def aim_status(angles, aiming_time, dual=None):
-    """`angles` is the gun rotator's dispersion list: current, ideal, accurate current, accurate ideal."""
-    current, ideal, _, accurate_ideal = angles
+    current, ideal, accurate_current, accurate_ideal = angles
     seconds = seconds_to_aim(current, ideal, aiming_time)
     aimed = seconds < AIMED_BELOW_SECONDS
+    if aimed:
+        current = ideal
     percent = _ratio(ideal, current)
     if dual is None:
         return AimStatus(AIMED if aimed else AIMING, percent, percent, seconds)
@@ -61,11 +62,6 @@ def aim_status(angles, aiming_time, dual=None):
 
 
 class CooldownTracker(object):
-    """Counts down the dual accuracy delay from the moment the server switches the mode off.
-
-    The client never receives the crew-adjusted delay, so after the first full cycle the
-    tracker uses the delay it measured instead of the gun's base value.
-    """
 
     def __init__(self):
         self.reset()

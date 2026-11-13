@@ -33,6 +33,14 @@ class AimStatusTest(unittest.TestCase):
         status = aim_status([0.2, 0.2, 0.2, 0.2], 2.0)
         self.assertEqual((status.phase, status.fill, status.percent), (AIMED, 1.0, 1.0))
 
+    def test_circle_one_percent_above_ideal_reads_as_fully_aimed(self):
+        status = aim_status([0.202, 0.2, 0.202, 0.2], 2.0)
+        self.assertEqual((status.phase, status.fill, status.percent), (AIMED, 1.0, 1.0))
+
+    def test_accurate_mode_one_percent_above_ideal_reads_as_fully_aimed(self):
+        status = aim_status([0.2424, 0.24, 0.2424, 0.24], 2.0, DualAccuracy(True, 0.6))
+        self.assertEqual((status.phase, status.fill, status.percent), (AIMED, 1.0, 1.0))
+
     def test_cooling_gun_fills_up_to_the_hot_limit_and_counts_against_the_hot_circle(self):
         status = aim_status([0.5, 0.4, 0.5, 0.24], 2.0, DualAccuracy(False, 0.6, 3.1))
         self.assertEqual((status.phase, status.limit, status.cooldown), (AIMING, 0.6, 3.1))
