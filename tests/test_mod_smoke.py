@@ -363,6 +363,25 @@ class ModSmokeTest(_StubbedGameTest):
         self.assertTrue(migrated['aimTimer']['enabled'])
         self.assertTrue(os.path.isfile(legacy_path))
 
+    def test_existing_gunner_hud_config_wins_over_the_autoloader_timer_one(self):
+        for name, position in [('autoloader_timer', {'x': 12, 'y': 141}), ('gunner_hud', {'x': -30, 'y': 90})]:
+            os.makedirs(os.path.join('mods', 'configs', name))
+            with open(os.path.join('mods', 'configs', name, 'config.json'), 'w') as f:
+                json.dump(position, f)
+        config_path = os.path.join('mods', 'configs', 'gunner_hud', 'config.json')
+        with open(config_path) as f:
+            before = f.read()
+
+        mod = importlib.import_module("gui.mods.mod_gunner_hud")
+        mod.init()
+        self.addCleanup(mod.fini)
+        self.crosshair.position = (1280, 720)
+        self.events.onAvatarReady()
+        self.assertEqual(self.label_position(), (-30, 90))
+
+        with open(config_path) as f:
+            self.assertEqual(f.read(), before)
+
 
 def _slots(*states_and_times):
     schedule = sys.modules['gui.mods.gunner_hud.schedule']

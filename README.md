@@ -76,11 +76,11 @@ Allies don't get the game's reload icon over your tank for that command. If team
 
 ### Upgrading from Autoloader Shell Timer
 
-0.6.0 replaces `maksforge.autoloader_timer_<version>.wotmod`. Delete that file from `mods/<game version>/`, or both mods load and draw everything twice. Your settings carry over: the first battle copies `mods/configs/autoloader_timer/config.json` to the new config path and leaves the old file where it is.
+0.6.0 replaces `maksforge.autoloader_timer_<version>.wotmod`. Delete that file from `mods/<game version>/`, or both mods load and draw everything twice. Your settings carry over: the next game start copies `mods/configs/autoloader_timer/config.json` to the new config path and leaves the old file where it is.
 
 ## Settings
 
-The first battle writes `mods/configs/gunner_hud/config.json`:
+The game writes `mods/configs/gunner_hud/config.json` the first time it starts with the mod installed:
 
 | Key | Default | Meaning |
 | --- | --- | --- |
