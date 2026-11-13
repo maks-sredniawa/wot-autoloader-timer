@@ -37,14 +37,14 @@ def window_values(settings):
 
 
 def store(settings, values):
+    shown = window_values(settings)
     changed = False
     for name, path in FIELDS:
         if name not in values:
             continue
         value = _normalized(name, values[name])
-        parent = _parent(settings, path)
-        if parent[path[-1]] != value:
-            parent[path[-1]] = value
+        if value != shown[name]:
+            _parent(settings, path)[path[-1]] = value
             changed = True
     return changed
 

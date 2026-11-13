@@ -868,6 +868,13 @@ class SettingsWindowTest(_StubbedGameTest):
         self.assertFalse(self.api.settings[LINKAGE]['reloadChatLine'])
         self.assertEqual(self.mod._timer.settings['fontSize'], 30)
 
+    def test_changing_another_control_keeps_a_hand_set_font_size(self):
+        self.start_game({'fontSize': 30})
+        self.change(hideWhenFull=True)
+        saved = self.saved()
+        self.assertEqual((saved['fontSize'], saved['hideWhenFull']), (30, True))
+        self.assertEqual(self.mod._timer.settings['fontSize'], 30)
+
     def test_turning_the_mod_off_and_on_from_the_page(self):
         self.start_game()
         self.change(enabled=False)

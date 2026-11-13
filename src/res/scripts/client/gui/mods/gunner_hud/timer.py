@@ -61,9 +61,8 @@ class GunnerHud(object):
         self._cancel_tick()
         self._unfollow_crosshair()
         self._unwatch_shots()
-        if self._view is not None:
-            self._view.destroy()
-            self._view = None
+        self._view.destroy()
+        self._view = None
         if self._aim_view is not None:
             self._aim_view.destroy()
             self._aim_view = None
