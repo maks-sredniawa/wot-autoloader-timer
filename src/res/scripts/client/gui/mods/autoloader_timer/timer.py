@@ -4,9 +4,12 @@ import BigWorld
 from PlayerEvents import g_playerEvents
 from debug_utils import LOG_CURRENT_EXCEPTION
 from helpers import dependency
+from items.vehicle_mechanics_types import VehicleMechanicKeys
 from skeletons.gui.battle_session import IBattleSessionProvider
+from vehicles.mechanics.mechanic_helpers import getPlayerVehicleMechanicComponent
 
-from . import config, gun_cooling, schedule
+from . import aim, config, gun_cooling, schedule
+from .aim_view import AimBarView
 from .view import PanelView, format_cooling, format_magazine, format_segments
 
 TICK_SECONDS = 0.1
@@ -18,6 +21,8 @@ class AutoloaderTimer(object):
     def __init__(self):
         self._settings = config.load()
         self._view = None
+        self._aim_view = None
+        self._cooldown = aim.CooldownTracker()
         self._callback_id = None
         self._crosshair = None
         self._factor = 1.0
@@ -26,6 +31,8 @@ class AutoloaderTimer(object):
         if not self._settings['enabled']:
             return
         self._view = PanelView(self._settings, self._on_moved)
+        if self._settings['aimTimer']['enabled']:
+            self._aim_view = AimBarView(self._settings, self._on_moved)
         g_playerEvents.onAvatarReady += self._on_avatar_ready
         g_playerEvents.onAvatarBecomeNonPlayer += self._on_avatar_left
 
@@ -37,6 +44,9 @@ class AutoloaderTimer(object):
         if self._view is not None:
             self._view.destroy()
             self._view = None
+        if self._aim_view is not None:
+            self._aim_view.destroy()
+            self._aim_view = None
 
     @property
     def settings(self):
@@ -47,6 +57,7 @@ class AutoloaderTimer(object):
 
     def _on_avatar_ready(self):
         self._factor = 1.0
+        self._cooldown.reset()
         self._cancel_tick()
         self._follow_crosshair()
         self._tick()
@@ -56,6 +67,8 @@ class AutoloaderTimer(object):
         self._unfollow_crosshair()
         if self._view is not None:
             self._view.hide()
+        if self._aim_view is not None:
+            self._aim_view.hide()
 
     def _cancel_tick(self):
         if self._callback_id is not None:
@@ -65,13 +78,16 @@ class AutoloaderTimer(object):
     def _tick(self):
         self._callback_id = BigWorld.callback(TICK_SECONDS, self._tick)
         try:
-            self._render()
+            self._view.show(self._segments())
         except Exception:
             LOG_CURRENT_EXCEPTION()
             self._view.hide()
-
-    def _render(self):
-        self._view.show(self._segments())
+        if self._aim_view is not None:
+            try:
+                self._aim_view.show(self._aim_status())
+            except Exception:
+                LOG_CURRENT_EXCEPTION()
+                self._aim_view.hide()
 
     def _crosshair_events(self, crosshair):
         return (crosshair.onCrosshairPositionChanged, crosshair.onCrosshairSizeChanged,
@@ -96,7 +112,10 @@ class AutoloaderTimer(object):
 
     def _on_crosshair_changed(self, *_):
         try:
-            self._view.set_anchor(*self._crosshair_offset(self._crosshair))
+            anchor = self._crosshair_offset(self._crosshair)
+            self._view.set_anchor(*anchor)
+            if self._aim_view is not None:
+                self._aim_view.set_anchor(*anchor)
         except Exception:
             LOG_CURRENT_EXCEPTION()
 
@@ -136,6 +155,25 @@ class AutoloaderTimer(object):
         if status is None or (self._settings['hideWhenFull'] and status.state == gun_cooling.COLD):
             return None
         return format_cooling(status, self._settings)
+
+    def _aim_status(self):
+        player = BigWorld.player()
+        rotator = getattr(player, 'gunRotator', None)
+        if rotator is None or not player.isVehicleAlive:
+            return None
+        # Private game state, also read by XVM's aim timer: the four circle sizes and the aiming time.
+        angles = rotator._VehicleGunRotator__dispersionAngles
+        aiming_time = player._PlayerAvatar__dispersionInfo[5]
+        return aim.aim_status(angles, aiming_time, self._dual_accuracy(player))
+
+    def _dual_accuracy(self, player):
+        component = getPlayerVehicleMechanicComponent(VehicleMechanicKeys.DUAL_ACCURACY)
+        if component is None:
+            return None
+        active = component.isActive()
+        base_delay = player.vehicleTypeDescriptor.gun.dualAccuracy.coolingDelay
+        cooldown = self._cooldown.update(active, BigWorld.time(), base_delay)
+        return aim.DualAccuracy(active, component.getDualAccuracyFactor(), cooldown)
 
     def slots(self):
         ammo = self._sessionProvider.shared.ammo

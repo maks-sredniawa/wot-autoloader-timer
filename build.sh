@@ -15,6 +15,10 @@ cp "$ROOT/src/meta.xml" "$STAGE/"
     "$PYTHON27" -c 'import py_compile, sys; py_compile.compile(sys.argv[1], sys.argv[2], sys.argv[3], doraise=True)' \
         "$f" "$STAGE/${f%.py}.pyc" "${f}"
 done)
+(cd "$ROOT/src" && find res -type f ! -name '*.py' ! -name '*.pyc' ! -path '*/__pycache__/*' | while read -r f; do
+    mkdir -p "$STAGE/$(dirname "$f")"
+    cp "$f" "$STAGE/$f"
+done)
 
 rm -f "$OUT"
 # The game reads .wotmod archives only when stored uncompressed, with directory entries and no extra fields.

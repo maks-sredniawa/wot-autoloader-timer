@@ -29,6 +29,24 @@ The damage is shots left × the average damage of the loaded shell, as if every 
 
 The reload quick command stays the game's own on these tanks, and it already reports the overheat time.
 
+## Aim timer
+
+A small bar to the right of the crosshair shows how far your gun has aimed, on every tank:
+
+- **The seconds above it** count down until the circle is fully aimed. The **percentage below it** shows how far it has shrunk. Both are amber while aiming.
+- **Fully aimed**: the seconds disappear and the bar and `100%` turn green.
+
+### Type 71 line (dual accuracy)
+
+On guns with dual accuracy, the circle gets much smaller once the gun has cooled after a shot. The game shows a second circle for it but no timer. The bar shows both stages:
+
+- **A tick** marks the best the hot gun can do: the accurate circle's size divided by the normal one's, about 60% on the Type 71.
+- **While the gun cools**, the part above the tick is grey and locked, with the seconds until the accurate mode starts next to it. The part below the tick fills like a normal aim timer and turns green when the normal circle is fully aimed.
+- **Once the accurate mode is on**, the lock disappears and the bar fills on in cyan, with the seconds and percentage of the accurate circle.
+- **Fully green to the top** means the best shot the gun can make.
+
+The game doesn't tell the client how long the cooldown is after crew skills, so the first countdown of a battle uses the gun's base delay. After one full cycle the mod counts with the delay it measured. The countdown starts when the server switches the accurate mode off, so ping shifts it slightly.
+
 ## Reload quick command
 
 In an autoreloader, the reload quick command (its own key, or Z → "I'm reloading") sends one team chat line with the whole magazine instead of the game's line, which only knows about the next shell:
@@ -57,9 +75,10 @@ The first battle writes `mods/configs/autoloader_timer/config.json`:
 | `fontSize` | `14` | Text size |
 | `hideWhenFull` | `false` | Hide the panel while the magazine is full or an Ares gun is cold |
 | `reloadChatLine` | `true` | Replace the reload quick command with the magazine status line in autoreloaders |
-| `colors` | | Hex colours for the count, a full magazine, the loading shell, the queued shells and the per-shell times. The Ares line reuses them. |
+| `aimTimer` | | `enabled` (`true`) shows the aim timer. `x`, `y` (`150`, `0`) are its offset from the crosshair. |
+| `colors` | | Hex colours for the count, a full magazine, the loading shell, the queued shells, the per-shell times and the accurate mode (`accurate`). The Ares line and the aim timer's text reuse them. The bar's own colours are built in. |
 
-To move the panel, hold Ctrl to show the cursor and drag it. The new position is saved.
+To move the panel or the aim timer, hold Ctrl to show the cursor and drag it (the aim timer by its bar, seconds or percentage). The new position is saved.
 
 ## Build
 
@@ -68,6 +87,7 @@ Needs Python 2.7, the game's script runtime (for example `pyenv install 2.7.18`)
 ```sh
 ./build.sh                                   # dist/maksforge.autoloader_timer_<version>.wotmod
 python2.7 tests/test_schedule.py
+python2.7 tests/test_aim.py
 python2.7 tests/test_mod_smoke.py
 ```
 
