@@ -42,7 +42,7 @@ A small bar to the right of the crosshair shows how far your gun has aimed, on e
 On guns with dual accuracy, the circle gets much smaller once the gun has cooled after a shot. The game shows a second circle for it but no timer. The bar shows both stages:
 
 - **100%** is the hot gun fully aimed, as on any tank. A tick on the bar marks it.
-- **The part above the tick** is the extra the cooled gun gives. It is always drawn: solid grey while the gun cools after a shot, with the seconds until it has cooled next to it, then dim cyan once the accurate mode is available.
+- **The part above the tick** is the extra the cooled gun gives. It is solid grey while the gun cools after a shot, with the seconds until it has cooled next to it, and empty once the gun has cooled.
 - **Aiming past 100%** fills that part in cyan. The percentage keeps counting up to the gun's real gain: the hot circle divided by the cooled one, 167% on the Type 71 (0.40 against 0.24).
 - **A full bar with no seconds left** is the best shot the gun can make.
 

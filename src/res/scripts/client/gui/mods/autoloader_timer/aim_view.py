@@ -72,7 +72,7 @@ class AimBarView(object):
                                                          height=TRACK_SIZE[1] + 2, **_image('light')))
         self._create(TRACK, COMPONENT_TYPE.IMAGE, dict(centered, alpha=0.75, drag=True, width=TRACK_SIZE[0],
                                                        height=TRACK_SIZE[1], **_image('black')))
-        self._create(LOCKED, COMPONENT_TYPE.IMAGE, dict(centered, width=FILL_WIDTH))
+        self._create(LOCKED, COMPONENT_TYPE.IMAGE, dict(centered, alpha=0.7, width=FILL_WIDTH, **_image('grey')))
         self._create(FILL, COMPONENT_TYPE.IMAGE, dict(centered, width=FILL_WIDTH))
         self._create(GAIN, COMPONENT_TYPE.IMAGE, dict(centered, width=FILL_WIDTH, **_image('cyan')))
         self._create(LIMIT, COMPONENT_TYPE.IMAGE, dict(centered, width=LIMIT_SIZE[0], height=LIMIT_SIZE[1],
@@ -143,13 +143,9 @@ class AimBarView(object):
 
     def _show_locked(self, status, cx, cy, bottom):
         height = int(round(FILL_HEIGHT * (1 - (status.limit or 1.0))))
-        if height <= 0:
+        if not status.locked or height <= 0:
             self._update(LOCKED, {'visible': False})
             return
-        if status.locked:
-            self._update(LOCKED, dict(_image('grey'), alpha=0.7))
-        else:
-            self._update(LOCKED, dict(_image('cyan'), alpha=0.3))
         top = cy - FILL_HEIGHT / 2
         self._update(LOCKED, {'visible': True, 'x': cx, 'y': int(round(top + height / 2)), 'height': height})
 

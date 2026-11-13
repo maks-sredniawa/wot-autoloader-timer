@@ -559,8 +559,7 @@ class AimTimerTest(_StubbedGameTest):
         self.assertIn('grey.png', self.part('Locked')['image'])
 
         self.tick([0.3, 0.24, 0.3, 0.4], at=103.5)
-        self.assertTrue(self.visible('Locked'))
-        self.assertIn('cyan.png', self.part('Locked')['image'])
+        self.assertFalse(self.visible('Locked'))
         self.assertFalse(self.visible('Cooldown'))
         self.assertTrue(self.visible('Limit'))
         self.assertIn("color='#C7FE48'>133%<", self.part('Percent')['text'])
