@@ -4,7 +4,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src', 'res', 'scripts', 'client', 'gui', 'mods'))
 
-from autoloader_timer.schedule import (LOADED, LOADING, NO_AMMO, QUEUED, Slot, build_schedule, full_in,
+from gunner_hud.schedule import (LOADED, LOADING, NO_AMMO, QUEUED, Slot, build_schedule, full_in,
                                        reload_factor, shell_load_time)
 
 RINOCERONTE_LIKE = (12.0, 13.0, 15.0)

@@ -1,6 +1,15 @@
-# Autoloader Shell Timer
+# Gunner HUD
 
-A World of Tanks mod that shows the load time of **every shell** in an autoreloader magazine (Italian tanks and any other gun with the `autoreload` mechanic), not just the one that's loading now.
+A World of Tanks mod that shows what your gun is doing next to the crosshair:
+
+- The load time of **every shell** in an autoreloader magazine (Italian tanks and any other gun with the `autoreload` mechanic), not just the one that's loading now.
+- The shells left and their potential damage on every magazine tank.
+- How long an Ares gun needs to cool down and the damage left before it locks.
+- An aim timer on every tank, which also shows the dual accuracy cooldown of the Type 71 line.
+
+Until 0.6.0 it was called Autoloader Shell Timer.
+
+## Autoreloaders
 
 ```
 4.5   16.2   26.7   35.5   1/4   390
@@ -63,11 +72,15 @@ Allies don't get the game's reload icon over your tank for that command. If team
 ## Install
 
 1. Install [GUIFlash](https://github.com/CH4MPi/GUIFlash) (`gambiter.guiflash_*.wotmod`). Most modpacks include it.
-2. Copy `maksforge.autoloader_timer_<version>.wotmod` into `World_of_Tanks/mods/<game version>/`.
+2. Copy `maksforge.gunner_hud_<version>.wotmod` into `World_of_Tanks/mods/<game version>/`.
+
+### Upgrading from Autoloader Shell Timer
+
+0.6.0 replaces `maksforge.autoloader_timer_<version>.wotmod`. Delete that file from `mods/<game version>/`, or both mods load and draw everything twice. Your settings carry over: the next game start copies `mods/configs/autoloader_timer/config.json` to the new config path and leaves the old file where it is.
 
 ## Settings
 
-The first battle writes `mods/configs/autoloader_timer/config.json`:
+The game writes `mods/configs/gunner_hud/config.json` the first time it starts with the mod installed:
 
 | Key | Default | Meaning |
 | --- | --- | --- |
@@ -86,7 +99,7 @@ To move the panel or the aim timer, hold Ctrl to show the cursor and drag it (th
 Needs Python 2.7, the game's script runtime (for example `pyenv install 2.7.18`).
 
 ```sh
-./build.sh                                   # dist/maksforge.autoloader_timer_<version>.wotmod
+./build.sh                                   # dist/maksforge.gunner_hud_<version>.wotmod
 python2.7 tests/test_schedule.py
 python2.7 tests/test_aim.py
 python2.7 tests/test_mod_smoke.py

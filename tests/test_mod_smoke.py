@@ -1,5 +1,6 @@
 """Loads the mod against stubbed game modules and renders one frame (run with Python 2.7)."""
 import importlib
+import json
 import os
 import shutil
 import sys
@@ -239,7 +240,7 @@ class _StubbedGameTest(unittest.TestCase):
 class ModSmokeTest(_StubbedGameTest):
 
     def label(self):
-        return self.guiflash.components.get('maksforgeAutoloaderTimer', {})
+        return self.guiflash.components.get('maksforgeGunnerHud', {})
 
     def label_position(self):
         return (self.label()['x'], self.label()['y'])
@@ -249,7 +250,7 @@ class ModSmokeTest(_StubbedGameTest):
                 crosshair.onCrosshairScaleChanged.handlers, crosshair.onCrosshairViewChanged.handlers]
 
     def test_renders_one_line_and_writes_default_config(self):
-        mod = importlib.import_module("gui.mods.mod_autoloader_timer")
+        mod = importlib.import_module("gui.mods.mod_gunner_hud")
         mod.init()
         self.events.onAvatarReady()
         text = self.label()['text']
@@ -262,7 +263,7 @@ class ModSmokeTest(_StubbedGameTest):
 
         self.crosshair.move_to(1280, 720)
         self.assertEqual((self.label()['x'], self.label()['y']), (0, 60))
-        self.assertTrue(os.path.isfile(os.path.join('mods', 'configs', 'autoloader_timer', 'config.json')))
+        self.assertTrue(os.path.isfile(os.path.join('mods', 'configs', 'gunner_hud', 'config.json')))
 
         chat_ctrl = sys.modules['gui.battle_control.controllers.chat_cmd_ctrl'].ChatCommandsController
         chat_ctrl().sendReloadingCommand()
@@ -292,7 +293,7 @@ class ModSmokeTest(_StubbedGameTest):
         self.assertEqual(self.crosshair_handlers(self.crosshair), [[], [], [], []])
 
     def test_follows_each_battles_crosshair_and_lets_go_after_it(self):
-        mod = importlib.import_module("gui.mods.mod_autoloader_timer")
+        mod = importlib.import_module("gui.mods.mod_gunner_hud")
         mod.init()
         self.events.onAvatarReady()
         old = self.crosshair
@@ -319,10 +320,10 @@ class ModSmokeTest(_StubbedGameTest):
 
     def drag_panel(self, x, y):
         self.label().update(x=x, y=y)
-        sys.modules['gui.mods.gambiter.flash'].COMPONENT_EVENT.UPDATED('maksforgeAutoloaderTimer', {'x': x, 'y': y})
+        sys.modules['gui.mods.gambiter.flash'].COMPONENT_EVENT.UPDATED('maksforgeGunnerHud', {'x': x, 'y': y})
 
     def test_panel_uses_the_arcade_position_in_sniper_view_until_dragged_there(self):
-        mod = importlib.import_module("gui.mods.mod_autoloader_timer")
+        mod = importlib.import_module("gui.mods.mod_gunner_hud")
         mod.init()
         self.addCleanup(mod.fini)
         self.crosshair.position = (1280, 720)
@@ -334,16 +335,56 @@ class ModSmokeTest(_StubbedGameTest):
         self.drag_panel(40, 200)
         self.assertEqual(mod._timer.settings['sniper'], {'x': 40, 'y': 200})
         self.assertEqual((mod._timer.settings['x'], mod._timer.settings['y']), (0, 60))
-        self.assertEqual(sys.modules['gui.mods.autoloader_timer.config'].load()['sniper'], {'x': 40, 'y': 200})
+        self.assertEqual(sys.modules['gui.mods.gunner_hud.config'].load()['sniper'], {'x': 40, 'y': 200})
 
         self.switch_view(1)
         self.assertEqual(self.label_position(), (0, 60))
         self.switch_view(2)
         self.assertEqual(self.label_position(), (40, 200))
 
+    def test_carries_the_autoloader_timer_settings_over_and_keeps_the_old_file(self):
+        legacy_dir = os.path.join('mods', 'configs', 'autoloader_timer')
+        os.makedirs(legacy_dir)
+        legacy_path = os.path.join(legacy_dir, 'config.json')
+        with open(legacy_path, 'w') as f:
+            json.dump({'x': 12, 'y': 141, 'fontSize': 16, 'sniper': {'x': 40, 'y': 200}}, f)
+
+        mod = importlib.import_module("gui.mods.mod_gunner_hud")
+        mod.init()
+        self.addCleanup(mod.fini)
+        self.crosshair.position = (1280, 720)
+        self.events.onAvatarReady()
+        self.assertEqual(self.label_position(), (12, 141))
+
+        with open(os.path.join('mods', 'configs', 'gunner_hud', 'config.json')) as f:
+            migrated = json.load(f)
+        self.assertEqual((migrated['x'], migrated['y'], migrated['fontSize']), (12, 141, 16))
+        self.assertEqual(migrated['sniper'], {'x': 40, 'y': 200})
+        self.assertTrue(migrated['aimTimer']['enabled'])
+        self.assertTrue(os.path.isfile(legacy_path))
+
+    def test_existing_gunner_hud_config_wins_over_the_autoloader_timer_one(self):
+        for name, position in [('autoloader_timer', {'x': 12, 'y': 141}), ('gunner_hud', {'x': -30, 'y': 90})]:
+            os.makedirs(os.path.join('mods', 'configs', name))
+            with open(os.path.join('mods', 'configs', name, 'config.json'), 'w') as f:
+                json.dump(position, f)
+        config_path = os.path.join('mods', 'configs', 'gunner_hud', 'config.json')
+        with open(config_path) as f:
+            before = f.read()
+
+        mod = importlib.import_module("gui.mods.mod_gunner_hud")
+        mod.init()
+        self.addCleanup(mod.fini)
+        self.crosshair.position = (1280, 720)
+        self.events.onAvatarReady()
+        self.assertEqual(self.label_position(), (-30, 90))
+
+        with open(config_path) as f:
+            self.assertEqual(f.read(), before)
+
 
 def _slots(*states_and_times):
-    schedule = sys.modules['gui.mods.autoloader_timer.schedule']
+    schedule = sys.modules['gui.mods.gunner_hud.schedule']
     return [schedule.Slot(number, state, ready_in=ready_in)
             for number, (state, ready_in) in enumerate(states_and_times, 1)]
 
@@ -352,7 +393,7 @@ class ReloadChatTest(_StubbedGameTest):
 
     def setUp(self):
         super(ReloadChatTest, self).setUp()
-        self.reload_chat = importlib.import_module('gui.mods.autoloader_timer.reload_chat')
+        self.reload_chat = importlib.import_module('gui.mods.gunner_hud.reload_chat')
         self.chat_ctrl = sys.modules['gui.battle_control.controllers.chat_cmd_ctrl'].ChatCommandsController
         self.slots = []
         self.reload_chat.install(lambda: self.slots)
@@ -395,7 +436,7 @@ class MagazineDamageTest(_StubbedGameTest):
 
     def setUp(self):
         super(MagazineDamageTest, self).setUp()
-        self.mod = importlib.import_module('gui.mods.mod_autoloader_timer')
+        self.mod = importlib.import_module('gui.mods.mod_gunner_hud')
         self.mod.init()
         self.addCleanup(self.mod.fini)
         self.events.onAvatarReady()
@@ -409,7 +450,7 @@ class MagazineDamageTest(_StubbedGameTest):
     def render(self, total, in_clip):
         self.ammo.shells = (total, in_clip)
         self.callbacks[-1]()
-        return self.guiflash.components['maksforgeAutoloaderTimer']
+        return self.guiflash.components['maksforgeGunnerHud']
 
     def test_partial_regular_magazine_shows_count_then_damage_in_grey(self):
         self.use_regular_magazine()
@@ -459,7 +500,7 @@ class GunCoolingTest(_StubbedGameTest):
                                          'temperature': _Obj(heatingPerShot=9.0)}
         self.ammo.gun.getShellDescriptor = lambda _: _Obj(armorDamage=(80.0, 80.0))
         self.ammo.shells = (300, 300)
-        self.mod = importlib.import_module('gui.mods.mod_autoloader_timer')
+        self.mod = importlib.import_module('gui.mods.mod_gunner_hud')
         self.mod.init()
         self.addCleanup(self.mod.fini)
         self.events.onAvatarReady()
@@ -473,7 +514,7 @@ class GunCoolingTest(_StubbedGameTest):
         self.mechanics['temperature'] = _Obj(getMechanicState=lambda: temperature_state,
                                              getComponentParams=lambda: params)
         self.callbacks[-1]()
-        return self.guiflash.components['maksforgeAutoloaderTimer']
+        return self.guiflash.components['maksforgeGunnerHud']
 
     def test_locked_gun_hides_the_line(self):
         self.set_gun(self.COOLING_DELAY, 40.0, cooling_time=12.4)
@@ -531,13 +572,13 @@ class AimTimerTest(_StubbedGameTest):
         self.player._PlayerAvatar__dispersionInfo = [1.0, 0.0, 0.0, 0.0, 0.0, 2.0]
         self.player._PlayerAvatar__getDetailedVehicleDescriptor = lambda: _Obj(gun=_Obj(shotDispersionAngle=0.2,
                                                                                          tags=frozenset()))
-        self.mod = importlib.import_module('gui.mods.mod_autoloader_timer')
+        self.mod = importlib.import_module('gui.mods.mod_gunner_hud')
         self.mod.init()
         self.addCleanup(self.mod.fini)
         self.events.onAvatarReady()
 
     def alias(self, name):
-        return getattr(sys.modules['gui.mods.autoloader_timer.aim_view'], name.upper())
+        return getattr(sys.modules['gui.mods.gunner_hud.aim_view'], name.upper())
 
     def part(self, name):
         return self.guiflash.components[self.alias(name)]
@@ -649,16 +690,16 @@ class AimTimerTest(_StubbedGameTest):
         self.assertEqual(self.mod._timer.settings['aimTimer']['x'], 120)
 
     def test_alphabetical_creation_order_stacks_the_fill_above_the_track(self):
-        aim_view = sys.modules['gui.mods.autoloader_timer.aim_view']
-        aliases = [alias for alias in self.guiflash.components if alias.startswith('maksforgeAimTimer')]
+        aim_view = sys.modules['gui.mods.gunner_hud.aim_view']
+        aliases = [alias for alias in self.guiflash.components if alias.startswith('maksforgeGunnerHudAim')]
         self.assertEqual(tuple(sorted(aliases)), aim_view.STACKING_ORDER)
 
     def test_turned_off_creates_no_bar(self):
         self.mod.fini()
         self.mod._timer.settings['aimTimer']['enabled'] = False
-        sys.modules['gui.mods.autoloader_timer.config'].save(self.mod._timer.settings)
+        sys.modules['gui.mods.gunner_hud.config'].save(self.mod._timer.settings)
         self.mod.init()
-        self.assertFalse([alias for alias in self.guiflash.components if alias.startswith('maksforgeAimTimer')])
+        self.assertFalse([alias for alias in self.guiflash.components if alias.startswith('maksforgeGunnerHudAim')])
 
 
 if __name__ == '__main__':

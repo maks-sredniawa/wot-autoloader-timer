@@ -5,7 +5,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src', 'res', 'scripts', 'client', 'gui', 'mods'))
 
-from autoloader_timer.aim import (ACCURATE, AIMED, AIMING, CooldownTracker, DualAccuracy, accurate_mode_active,
+from gunner_hud.aim import (ACCURATE, AIMED, AIMING, CooldownTracker, DualAccuracy, accurate_mode_active,
                                   aim_status, seconds_to_aim)
 
 
