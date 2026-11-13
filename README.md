@@ -62,12 +62,12 @@ The game doesn't tell the client how long the cooldown is after crew skills, so 
 In an autoreloader, the reload quick command (its own key, or Z → "I'm reloading") sends one team chat line with the whole magazine instead of the game's line, which only knows about the next shell:
 
 ```
-Ready to fire! Magazine 1/4, full in 35 s
-Reloading! First shell 9 s, full in 35 s
-Ready to fire! Magazine 4/4
+Magazine 1/4, full in 35 s
+Magazine 0/4, first shell 9 s, full in 35 s
+Magazine 4/4
 ```
 
-Allies don't get the game's reload icon over your tank for that command. If team chat is unavailable (chat turned off, a chat ban, or the chat cooldown), or you're out of shells (magazine and ammo rack both empty), the game's own command goes out as usual. Other tanks are not affected. Turn it off with `reloadChatLine`.
+Allies don't get the game's reload icon over your tank or the minimap animation for that command. If team chat is unavailable (chat turned off, a chat ban, or the chat cooldown), or you're out of shells (magazine and ammo rack both empty), the game's own command goes out as usual. Other tanks are not affected. Turn the line off with `reloadChatLine` to always send the game's command.
 
 ## Install
 

@@ -1,6 +1,6 @@
 import math
 
-from debug_utils import LOG_CURRENT_EXCEPTION
+from debug_utils import LOG_CURRENT_EXCEPTION, LOG_NOTE
 from gui.battle_control import avatar_getter
 from gui.battle_control.controllers.chat_cmd_ctrl import ChatCommandsController
 from messenger.ext import isBattleChatEnabled
@@ -21,6 +21,7 @@ class _TeamChat(object):
     def try_send(self, text):
         arena_chat = self.proto.arenaChat
         if not isBattleChatEnabled() or arena_chat.isBroadcastInCooldown():
+            LOG_NOTE('[gunner_hud] magazine line skipped: team chat off or in cooldown')
             return False
         arena_chat.broadcast(text, TEAM_CHANNEL)
         return True
@@ -44,9 +45,9 @@ def magazine_text(slots):
     if loaded == 0:
         if not pending:
             return None
-        return 'Reloading! First shell %d s, %s' % (_seconds(pending[0].ready_in),
-                                                     _last_shell_text(slots, loaded, pending))
-    text = 'Ready to fire! Magazine %d/%d' % (loaded, len(slots))
+        return 'Magazine 0/%d, first shell %d s, %s' % (len(slots), _seconds(pending[0].ready_in),
+                                                         _last_shell_text(slots, loaded, pending))
+    text = 'Magazine %d/%d' % (loaded, len(slots))
     if pending:
         text += ', ' + _last_shell_text(slots, loaded, pending)
     return text

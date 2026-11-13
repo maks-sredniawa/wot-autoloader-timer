@@ -239,6 +239,9 @@ class _StubbedGameTest(unittest.TestCase):
 
 class ModSmokeTest(_StubbedGameTest):
 
+    def tick_timer(self):
+        [callback for callback in self.callbacks if getattr(callback, '__name__', None) == '_tick'][-1]()
+
     def label(self):
         return self.guiflash.components.get('maksforgeGunnerHud', {})
 
@@ -267,7 +270,7 @@ class ModSmokeTest(_StubbedGameTest):
 
         chat_ctrl = sys.modules['gui.battle_control.controllers.chat_cmd_ctrl'].ChatCommandsController
         chat_ctrl().sendReloadingCommand()
-        self.assertEqual(chat_ctrl.sent, [('Ready to fire! Magazine 1/3, full in 15 s', 0)])
+        self.assertEqual(chat_ctrl.sent, [('Magazine 1/3, full in 15 s', 0)])
         chat_ctrl.cooldown = True
         chat_ctrl().sendReloadingCommand()
         self.assertEqual(chat_ctrl.sent[-1], 'game reload command')
@@ -275,7 +278,7 @@ class ModSmokeTest(_StubbedGameTest):
         self.ammo.shells = (30, 3)
         self.ammo.clip_state = FakeState(0.0, 0.0)
         self.ammo.shell_change_time = 6.75
-        self.callbacks[-1]()
+        self.tick_timer()
         text = self.label()['text']
         self.assertIn("<font color='#C7FE48'>3/3</font>", text)
         self.assertTrue(text.endswith("<font color='#C7FE48'>300</font></font>"))
@@ -283,10 +286,10 @@ class ModSmokeTest(_StubbedGameTest):
         self.assertLess(text.index('>11.7<'), text.index('>13.5<'))
         chat_ctrl.cooldown = False
         chat_ctrl().sendReloadingCommand()
-        self.assertEqual(chat_ctrl.sent[-1], ('Ready to fire! Magazine 3/3', 0))
+        self.assertEqual(chat_ctrl.sent[-1], ('Magazine 3/3', 0))
 
         self.ammo.gun.hasAutoReload = lambda: False
-        self.callbacks[-1]()
+        self.tick_timer()
         self.assertFalse(self.label()['visible'])
         mod.fini()
         self.assertEqual(self.guiflash.components, {})
@@ -404,15 +407,15 @@ class ReloadChatTest(_StubbedGameTest):
 
     def test_empty_magazine_reports_first_shell_and_full_magazine(self):
         self.slots = _slots(('loading', 8.2), ('queued', 20.0), ('queued', 34.5))
-        self.assertEqual(self.press_reload(), [('Reloading! First shell 9 s, full in 35 s', 0)])
+        self.assertEqual(self.press_reload(), [('Magazine 0/3, first shell 9 s, full in 35 s', 0)])
 
     def test_rack_that_cannot_fill_the_magazine_reports_how_far_it_gets(self):
         self.slots = _slots(('loaded', 0.0), ('loading', 8.2), ('no_ammo', 0.0), ('no_ammo', 0.0))
-        self.assertEqual(self.press_reload(), [('Ready to fire! Magazine 1/4, 2/4 in 9 s', 0)])
+        self.assertEqual(self.press_reload(), [('Magazine 1/4, 2/4 in 9 s', 0)])
 
     def test_empty_magazine_with_short_rack_reports_how_far_it_gets(self):
         self.slots = _slots(('loading', 4.0), ('queued', 15.2), ('no_ammo', 0.0))
-        self.assertEqual(self.press_reload(), [('Reloading! First shell 4 s, 2/3 in 16 s', 0)])
+        self.assertEqual(self.press_reload(), [('Magazine 0/3, first shell 4 s, 2/3 in 16 s', 0)])
 
     def test_out_of_shells_sends_game_command(self):
         self.slots = _slots(('no_ammo', 0.0), ('no_ammo', 0.0), ('no_ammo', 0.0))
