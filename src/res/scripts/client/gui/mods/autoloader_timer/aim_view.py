@@ -8,7 +8,11 @@ from .view import dragged_offset, view_offset
 
 # GUIFlash creates battle components in alphabetical order of alias, which is also their stacking order.
 _PREFIX = 'maksforgeAimTimer'
-OUTLINE = _PREFIX + '0Outline'
+OUTLINE_BOTTOM = _PREFIX + '0OutlineBottom'
+OUTLINE_LEFT = _PREFIX + '0OutlineLeft'
+OUTLINE_RIGHT = _PREFIX + '0OutlineRight'
+OUTLINE_TOP = _PREFIX + '0OutlineTop'
+OUTLINE = (OUTLINE_BOTTOM, OUTLINE_LEFT, OUTLINE_RIGHT, OUTLINE_TOP)
 TRACK = _PREFIX + '1Track'
 LOCKED = _PREFIX + '2Locked'
 FILL = _PREFIX + '3Fill'
@@ -17,11 +21,13 @@ LIMIT = _PREFIX + '5Limit'
 SECONDS = _PREFIX + '6Seconds'
 PERCENT = _PREFIX + '7Percent'
 COOLDOWN = _PREFIX + '8Cooldown'
-STACKING_ORDER = (OUTLINE, TRACK, LOCKED, FILL, GAIN, LIMIT, SECONDS, PERCENT, COOLDOWN)
+STACKING_ORDER = OUTLINE + (TRACK, LOCKED, FILL, GAIN, LIMIT, SECONDS, PERCENT, COOLDOWN)
 
 TRACK_SIZE = (10, 64)
 FILL_WIDTH = 8
 FILL_HEIGHT = 62
+EMPTY_ALPHA = 0.3
+OUTLINE_ALPHA = 0.5
 LIMIT_SIZE = (16, 2)
 LABEL_GAP = 10
 COOLDOWN_X = 26
@@ -66,10 +72,11 @@ class AimBarView(object):
         self._shown = {}
         self._status = None
         centered = {'alignX': COMPONENT_ALIGN.CENTER, 'alignY': COMPONENT_ALIGN.CENTER, 'visible': False}
-        self._create(OUTLINE, COMPONENT_TYPE.IMAGE, dict(centered, alpha=0.4, width=TRACK_SIZE[0] + 2,
-                                                         height=TRACK_SIZE[1] + 2, **_image('light')))
-        self._create(TRACK, COMPONENT_TYPE.IMAGE, dict(centered, alpha=0.75, drag=True, width=TRACK_SIZE[0],
-                                                       height=TRACK_SIZE[1], **_image('black')))
+        for alias, size in zip(OUTLINE, [(TRACK_SIZE[0], 1), (1, TRACK_SIZE[1]), (1, TRACK_SIZE[1]), (TRACK_SIZE[0], 1)]):
+            self._create(alias, COMPONENT_TYPE.IMAGE, dict(centered, alpha=OUTLINE_ALPHA, width=size[0],
+                                                           height=size[1], **_image('light')))
+        self._create(TRACK, COMPONENT_TYPE.IMAGE, dict(centered, alpha=EMPTY_ALPHA, drag=True, width=FILL_WIDTH,
+                                                       height=FILL_HEIGHT, **_image('black')))
         self._create(LOCKED, COMPONENT_TYPE.IMAGE, dict(centered, alpha=0.7, width=FILL_WIDTH, **_image('grey')))
         self._create(FILL, COMPONENT_TYPE.IMAGE, dict(centered, width=FILL_WIDTH))
         self._create(GAIN, COMPONENT_TYPE.IMAGE, dict(centered, width=FILL_WIDTH, **_image('cyan')))
@@ -104,7 +111,9 @@ class AimBarView(object):
             return
         cx, cy = self._center()
         bottom = cy + FILL_HEIGHT / 2
-        self._update(OUTLINE, {'visible': True, 'x': cx, 'y': cy})
+        edge_x, edge_y = (TRACK_SIZE[0] - 1) / 2, (TRACK_SIZE[1] - 1) / 2
+        for alias, (x, y) in zip(OUTLINE, [(cx, cy + edge_y), (cx - edge_x, cy), (cx + edge_x, cy), (cx, cy - edge_y)]):
+            self._update(alias, {'visible': True, 'x': x, 'y': y})
         self._update(TRACK, {'visible': True, 'x': cx, 'y': cy})
         self._show_fill(status, cx, bottom)
         self._show_limit(status, cx, bottom)
