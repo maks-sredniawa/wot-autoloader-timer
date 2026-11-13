@@ -25,43 +25,48 @@ class SecondsToAimTest(unittest.TestCase):
 class AimStatusTest(unittest.TestCase):
 
     def test_normal_gun_aiming(self):
-        status = aim_status([0.4, 0.2, 0.4, 0.2], 2.0)
+        status = aim_status(0.4, 0.2, 2.0)
         self.assertEqual((status.phase, status.fill, status.percent, status.limit), (AIMING, 0.5, 0.5, None))
         self.assertFalse(status.locked)
 
     def test_normal_gun_aimed(self):
-        status = aim_status([0.2, 0.2, 0.2, 0.2], 2.0)
+        status = aim_status(0.2, 0.2, 2.0)
         self.assertEqual((status.phase, status.fill, status.percent), (AIMED, 1.0, 1.0))
 
-    def test_circle_one_percent_above_ideal_reads_as_fully_aimed(self):
-        status = aim_status([0.202, 0.2, 0.202, 0.2], 2.0)
+    def test_circle_one_percent_above_best_reads_as_fully_aimed(self):
+        status = aim_status(0.202, 0.2, 2.0)
         self.assertEqual((status.phase, status.fill, status.percent), (AIMED, 1.0, 1.0))
 
-    def test_accurate_mode_one_percent_above_ideal_reads_as_fully_aimed(self):
-        status = aim_status([0.2424, 0.24, 0.2424, 0.24], 2.0, DualAccuracy(True, 0.6))
+    def test_moving_tank_counts_against_the_stationary_best_circle(self):
+        status = aim_status(0.8, 0.2, 2.0)
+        self.assertEqual((status.phase, status.percent), (AIMING, 0.25))
+        self.assertAlmostEqual(status.seconds, 2.0 * math.log(4))
+
+    def test_accurate_mode_one_percent_above_best_reads_as_fully_aimed(self):
+        status = aim_status(0.2424, 0.4, 2.0, DualAccuracy(True, 0.6))
         self.assertEqual((status.phase, status.fill, status.percent), (AIMED, 1.0, 1.0))
 
     def test_cooling_gun_fills_up_to_the_hot_limit_and_counts_against_the_hot_circle(self):
-        status = aim_status([0.5, 0.4, 0.5, 0.24], 2.0, DualAccuracy(False, 0.6, 3.1))
+        status = aim_status(0.5, 0.4, 2.0, DualAccuracy(False, 0.6, 3.1))
         self.assertEqual((status.phase, status.limit, status.cooldown), (AIMING, 0.6, 3.1))
         self.assertTrue(status.locked)
         self.assertAlmostEqual(status.fill, 0.48)
         self.assertAlmostEqual(status.percent, 0.8)
 
     def test_cooling_gun_aimed_stops_at_the_limit(self):
-        status = aim_status([0.4, 0.4, 0.4, 0.24], 2.0, DualAccuracy(False, 0.6, 1.0))
+        status = aim_status(0.4, 0.4, 2.0, DualAccuracy(False, 0.6, 1.0))
         self.assertEqual(status.phase, AIMED)
         self.assertAlmostEqual(status.fill, 0.6)
         self.assertTrue(status.locked)
 
     def test_accurate_mode_aiming_is_cyan_phase_past_the_limit(self):
-        status = aim_status([0.4, 0.24, 0.4, 0.24], 2.0, DualAccuracy(True, 0.6))
+        status = aim_status(0.4, 0.4, 2.0, DualAccuracy(True, 0.6))
         self.assertEqual((status.phase, status.limit), (ACCURATE, 0.6))
         self.assertFalse(status.locked)
         self.assertAlmostEqual(status.fill, 0.6)
 
     def test_accurate_mode_aimed_is_the_best_shot(self):
-        status = aim_status([0.24, 0.24, 0.24, 0.24], 2.0, DualAccuracy(True, 0.6))
+        status = aim_status(0.24, 0.4, 2.0, DualAccuracy(True, 0.6))
         self.assertEqual((status.phase, status.fill, status.percent), (AIMED, 1.0, 1.0))
 
 

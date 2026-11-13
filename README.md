@@ -35,6 +35,7 @@ A small bar to the right of the crosshair shows how far your gun has aimed, on e
 
 - **The seconds above it** count down until the circle is fully aimed. The **percentage below it** shows how far it has shrunk. Both are amber while aiming.
 - **Fully aimed**: the seconds disappear and the bar and `100%` turn green.
+- **While you drive**, it measures against the circle you'd reach standing still, so the seconds show how long you'd still need to aim after stopping.
 
 ### Type 71 line (dual accuracy)
 

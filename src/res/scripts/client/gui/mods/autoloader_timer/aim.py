@@ -44,8 +44,9 @@ def _ratio(ideal, current):
     return max(0.0, min(1.0, ideal / current))
 
 
-def aim_status(angles, aiming_time, dual=None):
-    current, ideal, accurate_current, accurate_ideal = angles
+def aim_status(current, stationary_best, aiming_time, dual=None):
+    accurate_ideal = stationary_best * dual.factor if dual is not None else stationary_best
+    ideal = accurate_ideal if dual is not None and dual.active else stationary_best
     seconds = seconds_to_aim(current, ideal, aiming_time)
     aimed = seconds < AIMED_BELOW_SECONDS
     if aimed:

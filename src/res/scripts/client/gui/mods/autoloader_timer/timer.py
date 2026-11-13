@@ -161,10 +161,13 @@ class AutoloaderTimer(object):
         rotator = getattr(player, 'gunRotator', None)
         if rotator is None or not player.isVehicleAlive:
             return None
-        # Private game state, also read by XVM's aim timer: the four circle sizes and the aiming time.
-        angles = rotator._VehicleGunRotator__dispersionAngles
-        aiming_time = player._PlayerAvatar__dispersionInfo[5]
-        return aim.aim_status(angles, aiming_time, self._dual_accuracy(player))
+        # Private game state, as in XVM's aim timer. The game's own "ideal" circle includes the movement
+        # penalty, so the best circle is rebuilt from the gun's dispersion and the stationary multiplier.
+        current = rotator._VehicleGunRotator__dispersionAngles[0]
+        stationary_multiplier, aiming_time = player._PlayerAvatar__dispersionInfo[0], player._PlayerAvatar__dispersionInfo[5]
+        gun = player._PlayerAvatar__getDetailedVehicleDescriptor().gun
+        return aim.aim_status(current, gun.shotDispersionAngle * stationary_multiplier, aiming_time,
+                              self._dual_accuracy(player))
 
     def _dual_accuracy(self, player):
         component = getPlayerVehicleMechanicComponent(VehicleMechanicKeys.DUAL_ACCURACY)

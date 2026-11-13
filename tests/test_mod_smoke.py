@@ -507,6 +507,7 @@ class AimTimerTest(_StubbedGameTest):
         self.crosshair.position = (1280, 720)
         self.player.gunRotator = _Obj(_VehicleGunRotator__dispersionAngles=[0.4, 0.2, 0.4, 0.2])
         self.player._PlayerAvatar__dispersionInfo = [1.0, 0.0, 0.0, 0.0, 0.0, 2.0]
+        self.player._PlayerAvatar__getDetailedVehicleDescriptor = lambda: _Obj(gun=_Obj(shotDispersionAngle=0.2))
         self.player.vehicleTypeDescriptor = _Obj(gun=_Obj(dualAccuracy=_Obj(coolingDelay=4.0)))
         self.mod = importlib.import_module('gui.mods.mod_autoloader_timer')
         self.mod.init()
@@ -547,6 +548,7 @@ class AimTimerTest(_StubbedGameTest):
     def test_type_71_counts_down_the_cooldown_then_aims_the_accurate_circle(self):
         dual = FakeDualAccuracy()
         self.mechanics['dualAccuracy'] = dual
+        self.player._PlayerAvatar__getDetailedVehicleDescriptor = lambda: _Obj(gun=_Obj(shotDispersionAngle=0.4))
         self.tick([0.24, 0.24, 0.24, 0.24], at=90.0)
         dual.active = False
         self.tick([0.5, 0.4, 0.5, 0.24], at=100.0)
@@ -569,6 +571,11 @@ class AimTimerTest(_StubbedGameTest):
         self.tick([0.5, 0.4, 0.5, 0.24], at=110.0)
         self.tick(at=111.0)
         self.assertIn('>2.5 s<', self.part('Cooldown')['text'])
+
+    def test_driving_tank_is_not_shown_as_aimed(self):
+        self.tick([0.8, 0.8, 0.8, 0.8])
+        self.assertIn("color='#FCAF1A'>25%<", self.part('Percent')['text'])
+        self.assertIn("color='#FCAF1A'>2.8 s<", self.part('Seconds')['text'])
 
     def test_dead_tank_hides_the_bar(self):
         self.player.isVehicleAlive = False
