@@ -59,7 +59,7 @@ The game doesn't tell the client how long the cooldown is after crew skills, so 
 
 ## Reload quick command
 
-In an autoreloader, the reload quick command (its own key, or Z → "I'm reloading") sends the game's own command as usual, so allies get the reload icon over your tank and the animation on the minimap. About a second later the mod adds one team chat line with the whole magazine, which the game's line can't show because it only knows about the next shell:
+In an autoreloader, the reload quick command (its own key, or Z → "I'm reloading") sends one team chat line with the whole magazine instead of the game's line, which only knows about the next shell:
 
 ```
 Magazine 1/4, full in 35 s
@@ -67,7 +67,7 @@ Magazine 0/4, first shell 9 s, full in 35 s
 Magazine 4/4
 ```
 
-The line is skipped when team chat is unavailable (chat turned off, a chat ban, or the chat cooldown) or you're out of shells (magazine and ammo rack both empty). Other tanks only send the game's command. Turn the line off with `reloadChatLine`.
+Allies don't get the game's reload icon over your tank or the minimap animation for that command. If team chat is unavailable (chat turned off, a chat ban, or the chat cooldown), or you're out of shells (magazine and ammo rack both empty), the game's own command goes out as usual. Other tanks are not affected. Turn the line off with `reloadChatLine` to always send the game's command.
 
 ## Install
 
@@ -88,7 +88,7 @@ The game writes `mods/configs/gunner_hud/config.json` the first time it starts w
 | `x`, `y` | `0`, `60` | The panel's offset from the crosshair, which it follows frame by frame. Once you drag the panel in sniper or artillery view, a `sniper` or `strategic` key with its own `x`, `y` appears; until then that view uses these arcade values. |
 | `fontSize` | `14` | Text size |
 | `hideWhenFull` | `false` | Hide the panel while the magazine is full or an Ares gun is cold |
-| `reloadChatLine` | `true` | Add the magazine status line after the reload quick command in autoreloaders |
+| `reloadChatLine` | `true` | Replace the reload quick command with the magazine status line in autoreloaders |
 | `aimTimer` | | `enabled` (`true`) shows the aim timer. `x`, `y` (`150`, `0`) are its offset from the crosshair in arcade view; `sniper` (`120`, `60`) and `strategic` (`180`, `70`) hold the offsets for the zoomed and artillery views. |
 | `colors` | | Hex colours for the count, a full magazine, the loading shell, the queued shells, and the per-shell times. The Ares line and the aim timer's text reuse them. The bar's own colours are built in. |
 
