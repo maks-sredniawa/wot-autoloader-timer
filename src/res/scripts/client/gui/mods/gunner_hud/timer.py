@@ -13,7 +13,7 @@ from .view import PanelView, format_cooling, format_magazine, format_segments
 TICK_SECONDS = 0.1
 
 
-class AutoloaderTimer(object):
+class GunnerHud(object):
     _sessionProvider = dependency.descriptor(IBattleSessionProvider)
 
     def __init__(self):
@@ -205,7 +205,7 @@ class AutoloaderTimer(object):
         active = aim.accurate_mode_active(ideal, hot_ideal, factor)
         if active != self._last_accurate_mode:
             self._last_accurate_mode = active
-            LOG_NOTE('[autoloader_timer] accurate mode %s (ideal %.4f, hot ideal %.4f, factor %.3f, base delay %.2f)'
+            LOG_NOTE('[gunner_hud] accurate mode %s (ideal %.4f, hot ideal %.4f, factor %.3f, base delay %.2f)'
                      % ('on' if active else 'off', ideal, hot_ideal, factor, gun.dualAccuracy.coolingDelay))
         cooldown = self._cooldown.update(active, BigWorld.time(), gun.dualAccuracy.coolingDelay)
         return aim.DualAccuracy(active, factor, cooldown)

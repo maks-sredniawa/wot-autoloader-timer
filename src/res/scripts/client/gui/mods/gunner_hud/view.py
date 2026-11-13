@@ -4,7 +4,7 @@ from gui.mods.gambiter.flash import COMPONENT_ALIGN, COMPONENT_EVENT, COMPONENT_
 
 from . import gun_cooling, schedule
 
-ALIAS = 'maksforgeAutoloaderTimer'
+ALIAS = 'maksforgeGunnerHud'
 SEPARATOR = '   '
 
 _SHADOW = {'color': 0x000000, 'alpha': 0.8, 'blurX': 2, 'blurY': 2, 'strength': 2, 'quality': 2}

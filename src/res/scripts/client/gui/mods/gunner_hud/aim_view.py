@@ -7,7 +7,7 @@ from . import aim
 from .view import dragged_offset, view_offset
 
 # GUIFlash creates battle components in alphabetical order of alias, which is also their stacking order.
-_PREFIX = 'maksforgeAimTimer'
+_PREFIX = 'maksforgeGunnerHudAim'
 OUTLINE_BOTTOM = _PREFIX + '0OutlineBottom'
 OUTLINE_LEFT = _PREFIX + '0OutlineLeft'
 OUTLINE_RIGHT = _PREFIX + '0OutlineRight'
@@ -32,7 +32,7 @@ LIMIT_SIZE = (16, 2)
 LABEL_GAP = 10
 COOLDOWN_X = 26
 
-_IMAGE_DIR = 'gui/maps/autoloader_timer/'
+_IMAGE_DIR = 'gui/maps/gunner_hud/'
 _SHADOW = {'color': 0x000000, 'alpha': 0.8, 'blurX': 2, 'blurY': 2, 'strength': 2, 'quality': 2}
 _LABEL_OFFSETS = {
     SECONDS: (0, -(TRACK_SIZE[1] // 2 + LABEL_GAP)),

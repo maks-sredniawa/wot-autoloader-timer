@@ -5,8 +5,9 @@ import os
 
 from debug_utils import LOG_CURRENT_EXCEPTION
 
-CONFIG_DIR = os.path.join('mods', 'configs', 'autoloader_timer')
+CONFIG_DIR = os.path.join('mods', 'configs', 'gunner_hud')
 CONFIG_PATH = os.path.join(CONFIG_DIR, 'config.json')
+LEGACY_CONFIG_PATH = os.path.join('mods', 'configs', 'autoloader_timer', 'config.json')
 VIEW_POSITION_KEYS = ('sniper', 'strategic')
 
 DEFAULTS = {
@@ -45,11 +46,19 @@ def _merged(defaults, loaded):
     return result
 
 
+def _read(path):
+    with codecs.open(path, 'r', 'utf-8-sig') as f:
+        return _merged(DEFAULTS, json.load(f))
+
+
 def load():
     try:
         if os.path.isfile(CONFIG_PATH):
-            with codecs.open(CONFIG_PATH, 'r', 'utf-8-sig') as f:
-                return _merged(DEFAULTS, json.load(f))
+            return _read(CONFIG_PATH)
+        if os.path.isfile(LEGACY_CONFIG_PATH):
+            settings = _read(LEGACY_CONFIG_PATH)
+            save(settings)
+            return settings
         save(DEFAULTS)
     except Exception:
         LOG_CURRENT_EXCEPTION()
