@@ -7,7 +7,7 @@ ACCURATE = 'accurate'
 AIMED = 'aimed'
 
 AIMED_BELOW_SECONDS = 0.05
-_MEASURED_DELAY_LIMIT = 2.0
+_PLAUSIBLE_DELAY = (0.5, 2.0)
 
 
 class DualAccuracy(object):
@@ -78,6 +78,9 @@ class CooldownTracker(object):
         self._since = None
         self._measured = None
 
+    def shot(self, now):
+        self._since = now
+
     def update(self, active, now, base_delay):
         was_active, self._was_active = self._was_active, active
         if active:
@@ -85,13 +88,15 @@ class CooldownTracker(object):
                 self._remember(now - self._since, base_delay)
             self._since = None
             return None
-        if was_active:
+        if was_active and self._since is None:
             self._since = now
         if self._since is None:
             return None
         delay = self._measured if self._measured is not None else base_delay
-        return max(0.0, delay - (now - self._since))
+        left = delay - (now - self._since)
+        return left if left > 0 else None
 
     def _remember(self, measured, base_delay):
-        if 0 < measured < base_delay * _MEASURED_DELAY_LIMIT:
-            self._measured = measured
+        low, high = _PLAUSIBLE_DELAY
+        if base_delay * low < measured < base_delay * high:
+            self._measured = measured if self._measured is None else min(self._measured, measured)

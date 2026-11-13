@@ -97,7 +97,31 @@ class CooldownTrackerTest(unittest.TestCase):
         tracker.update(True, 9.0, 4.0)
         self.assertEqual(tracker.update(False, 10.0, 4.0), 4.0)
         self.assertEqual(tracker.update(False, 11.5, 4.0), 2.5)
-        self.assertEqual(tracker.update(False, 20.0, 4.0), 0.0)
+
+    def test_hides_the_countdown_once_it_runs_out_but_the_gun_is_still_hot(self):
+        tracker = CooldownTracker()
+        tracker.update(True, 9.0, 4.0)
+        tracker.update(False, 10.0, 4.0)
+        self.assertIsNone(tracker.update(False, 20.0, 4.0))
+
+    def test_ignores_a_flicker_far_shorter_than_the_base_delay(self):
+        tracker = CooldownTracker()
+        tracker.update(False, 0.0, 4.0)
+        tracker.update(True, 0.4, 4.0)
+        tracker.update(False, 0.8, 4.0)
+        tracker.update(True, 1.2, 4.0)
+        tracker.update(False, 10.0, 4.0)
+        self.assertEqual(tracker.update(False, 11.0, 4.0), 3.0)
+
+    def test_keeps_the_shortest_plausible_cycle(self):
+        tracker = CooldownTracker()
+        tracker.update(True, 0.0, 4.0)
+        tracker.update(False, 1.0, 4.0)
+        tracker.update(True, 4.5, 4.0)
+        tracker.update(False, 10.0, 4.0)
+        tracker.update(True, 17.0, 4.0)
+        tracker.update(False, 20.0, 4.0)
+        self.assertEqual(tracker.update(False, 21.0, 4.0), 2.5)
 
     def test_uses_the_measured_delay_after_one_full_cycle(self):
         tracker = CooldownTracker()
@@ -114,6 +138,24 @@ class CooldownTrackerTest(unittest.TestCase):
         tracker.update(True, 30.0, 4.0)
         tracker.update(False, 40.0, 4.0)
         self.assertEqual(tracker.update(False, 41.0, 4.0), 3.0)
+
+    def test_a_shot_while_hot_restarts_the_countdown(self):
+        tracker = CooldownTracker()
+        tracker.update(True, 0.0, 4.0)
+        tracker.shot(1.0)
+        tracker.update(False, 1.1, 4.0)
+        tracker.shot(3.0)
+        self.assertEqual(tracker.update(False, 4.0, 4.0), 3.0)
+
+    def test_measures_from_the_last_shot(self):
+        tracker = CooldownTracker()
+        tracker.update(True, 0.0, 4.0)
+        tracker.shot(1.0)
+        tracker.update(False, 1.1, 4.0)
+        tracker.shot(3.0)
+        tracker.update(True, 6.5, 4.0)
+        tracker.update(False, 10.0, 4.0)
+        self.assertEqual(tracker.update(False, 11.0, 4.0), 2.5)
 
     def test_reset_forgets_the_measurement(self):
         tracker = CooldownTracker()

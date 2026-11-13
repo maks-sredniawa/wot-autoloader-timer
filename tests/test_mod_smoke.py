@@ -70,6 +70,7 @@ class FakeAmmo(object):
         self.shell_change_time = 0.0
         self.shells = (30, 1)
         self.clip_state = FakeState(4.0, 11.7)
+        self.onShellsUpdated = _Event()
 
     def getGunSettings(self):
         return self.gun
@@ -577,6 +578,16 @@ class AimTimerTest(_StubbedGameTest):
         self.tick([0.5, 0.4, 0.5, 0.4], at=110.0)
         self.tick(at=111.0)
         self.assertIn('>2.5 s<', self.part('Cooldown')['text'])
+
+        self.ammo.onShellsUpdated(1234, 30, 1, 0)
+        self.clock[0] = 112.0
+        self.ammo.onShellsUpdated(1234, 29, 1, 0)
+        self.tick(at=112.5)
+        self.assertIn('>3.0 s<', self.part('Cooldown')['text'])
+
+    def test_stops_watching_shots_after_the_battle(self):
+        self.events.onAvatarBecomeNonPlayer()
+        self.assertEqual(self.ammo.onShellsUpdated.handlers, [])
 
     def test_driving_tank_is_not_shown_as_aimed(self):
         self.tick([0.8, 0.8, 0.8, 0.8])
