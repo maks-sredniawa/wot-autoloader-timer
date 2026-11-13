@@ -44,9 +44,9 @@ def _ratio(ideal, current):
     return max(0.0, min(1.0, ideal / current))
 
 
-def accurate_mode_active(ideal, accurate_ideal, factor):
-    # The game shrinks its ideal circle to the accurate one only while the mode is on.
-    return accurate_ideal > ideal * (1 + factor) / 2
+def accurate_mode_active(ideal, hot_ideal, factor):
+    # The game widens its ideal circle to the hot one while the gun cools after a shot.
+    return ideal < hot_ideal * (1 + factor) / 2
 
 
 def aim_status(current, stationary_best, aiming_time, dual=None):

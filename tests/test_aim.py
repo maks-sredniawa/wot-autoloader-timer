@@ -76,15 +76,15 @@ class AimStatusTest(unittest.TestCase):
 
 class AccurateModeActiveTest(unittest.TestCase):
 
-    def test_equal_ideal_circles_mean_the_mode_is_on(self):
-        self.assertTrue(accurate_mode_active(0.24, 0.24, 0.6))
+    def test_ideal_at_the_cool_circle_means_the_mode_is_on(self):
+        self.assertTrue(accurate_mode_active(0.24, 0.4, 0.6))
 
-    def test_smaller_accurate_circle_means_the_gun_is_cooling(self):
-        self.assertFalse(accurate_mode_active(0.4, 0.24, 0.6))
+    def test_ideal_at_the_hot_circle_means_the_gun_is_cooling(self):
+        self.assertFalse(accurate_mode_active(0.4, 0.4, 0.6))
 
     def test_holds_while_driving_widens_both_circles(self):
-        self.assertFalse(accurate_mode_active(1.2, 0.72, 0.6))
-        self.assertTrue(accurate_mode_active(0.72, 0.72, 0.6))
+        self.assertFalse(accurate_mode_active(1.2, 1.2, 0.6))
+        self.assertTrue(accurate_mode_active(0.72, 1.2, 0.6))
 
 
 class CooldownTrackerTest(unittest.TestCase):

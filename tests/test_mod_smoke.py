@@ -143,7 +143,7 @@ def _install_stubs(guiflash, ammo, crosshair, player_events, callbacks, mechanic
     module('vehicles.mechanics.mechanic_helpers', getPlayerVehicleMechanicComponent=mechanics.get,
            getMechanicFromMechanicsParams=lambda params, key: params[key])
     module('debug_utils', LOG_CURRENT_EXCEPTION=lambda: (_ for _ in ()).throw(sys.exc_info()[1]),
-           LOG_ERROR=lambda *a: None)
+           LOG_ERROR=lambda *a: None, LOG_NOTE=lambda *a: None)
 
     provider = _Obj(shared=_Obj(ammo=ammo, crosshair=crosshair))
 
@@ -542,20 +542,22 @@ class AimTimerTest(_StubbedGameTest):
         self.assertIn('green.png', self.part('Fill')['image'])
 
     def test_type_71_counts_down_the_cooldown_then_aims_the_accurate_circle(self):
-        type_71_gun = _Obj(shotDispersionAngle=0.4, tags=frozenset(['dualAccuracy']),
-                           dualAccuracy=_Obj(afterShotDispersionAngle=0.24, coolingDelay=4.0))
+        type_71_gun = _Obj(shotDispersionAngle=0.24, tags=frozenset(['dualAccuracy']),
+                           dualAccuracy=_Obj(afterShotDispersionAngle=0.4, coolingDelay=4.0))
         self.player._PlayerAvatar__getDetailedVehicleDescriptor = lambda: _Obj(gun=type_71_gun)
-        self.tick([0.24, 0.24, 0.24, 0.24], at=90.0)
-        self.tick([0.5, 0.4, 0.5, 0.24], at=100.0)
+        self.tick([0.24, 0.24, 0.24, 0.4], at=90.0)
+        self.tick([0.5, 0.4, 0.5, 0.4], at=100.0)
         self.tick(at=101.0)
         self.assertIn("color='#A8A8A8'>3.0 s<", self.part('Cooldown')['text'])
         self.assertIn("color='#FCAF1A'>80%<", self.part('Percent')['text'])
         self.assertEqual(self.part('Limit')['y'], int(round(31 - 62 * 0.6)))
         self.assertTrue(self.visible('Locked'))
         self.assertEqual(self.part('Locked')['height'], 25)
+        self.assertIn('grey.png', self.part('Locked')['image'])
 
-        self.tick([0.3, 0.24, 0.3, 0.24], at=103.5)
-        self.assertFalse(self.visible('Locked'))
+        self.tick([0.3, 0.24, 0.3, 0.4], at=103.5)
+        self.assertTrue(self.visible('Locked'))
+        self.assertIn('cyan.png', self.part('Locked')['image'])
         self.assertFalse(self.visible('Cooldown'))
         self.assertTrue(self.visible('Limit'))
         self.assertIn("color='#C7FE48'>133%<", self.part('Percent')['text'])
@@ -565,12 +567,12 @@ class AimTimerTest(_StubbedGameTest):
         self.assertEqual(self.part('Gain')['height'], 13)
         self.assertIn('cyan.png', self.part('Gain')['image'])
 
-        self.tick([0.24, 0.24, 0.24, 0.24], at=104.0)
+        self.tick([0.24, 0.24, 0.24, 0.4], at=104.0)
         self.assertIn("color='#C7FE48'>167%<", self.part('Percent')['text'])
         self.assertFalse(self.visible('Seconds'))
         self.assertEqual(self.part('Gain')['height'], 25)
 
-        self.tick([0.5, 0.4, 0.5, 0.24], at=110.0)
+        self.tick([0.5, 0.4, 0.5, 0.4], at=110.0)
         self.tick(at=111.0)
         self.assertIn('>2.5 s<', self.part('Cooldown')['text'])
 

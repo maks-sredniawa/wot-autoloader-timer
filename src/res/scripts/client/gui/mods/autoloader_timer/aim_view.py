@@ -6,6 +6,7 @@ from gui.mods.gambiter.flash import COMPONENT_ALIGN, COMPONENT_EVENT, COMPONENT_
 from . import aim
 
 _PREFIX = 'maksforgeAimTimer'
+OUTLINE = _PREFIX + 'Outline'
 TRACK = _PREFIX + 'Track'
 LOCKED = _PREFIX + 'Locked'
 FILL = _PREFIX + 'Fill'
@@ -65,9 +66,11 @@ class AimBarView(object):
         self._shown = {}
         self._status = None
         centered = {'alignX': COMPONENT_ALIGN.CENTER, 'alignY': COMPONENT_ALIGN.CENTER, 'visible': False}
-        self._create(TRACK, COMPONENT_TYPE.IMAGE, dict(centered, alpha=0.5, drag=True, width=TRACK_SIZE[0],
+        self._create(OUTLINE, COMPONENT_TYPE.IMAGE, dict(centered, alpha=0.4, width=TRACK_SIZE[0] + 2,
+                                                         height=TRACK_SIZE[1] + 2, **_image('light')))
+        self._create(TRACK, COMPONENT_TYPE.IMAGE, dict(centered, alpha=0.75, drag=True, width=TRACK_SIZE[0],
                                                        height=TRACK_SIZE[1], **_image('black')))
-        self._create(LOCKED, COMPONENT_TYPE.IMAGE, dict(centered, alpha=0.35, width=FILL_WIDTH, **_image('grey')))
+        self._create(LOCKED, COMPONENT_TYPE.IMAGE, dict(centered, width=FILL_WIDTH))
         self._create(FILL, COMPONENT_TYPE.IMAGE, dict(centered, width=FILL_WIDTH))
         self._create(GAIN, COMPONENT_TYPE.IMAGE, dict(centered, width=FILL_WIDTH, **_image('cyan')))
         self._create(LIMIT, COMPONENT_TYPE.IMAGE, dict(centered, width=LIMIT_SIZE[0], height=LIMIT_SIZE[1],
@@ -101,6 +104,7 @@ class AimBarView(object):
             return
         cx, cy = self._center()
         bottom = cy + FILL_HEIGHT / 2
+        self._update(OUTLINE, {'visible': True, 'x': cx, 'y': cy})
         self._update(TRACK, {'visible': True, 'x': cx, 'y': cy})
         self._show_fill(status, cx, bottom)
         self._show_limit(status, cx, bottom)
@@ -136,10 +140,14 @@ class AimBarView(object):
         self._update(LIMIT, {'visible': True, 'x': cx, 'y': int(round(bottom - FILL_HEIGHT * status.limit))})
 
     def _show_locked(self, status, cx, cy, bottom):
-        height = int(round(FILL_HEIGHT * (1 - (status.limit or 0))))
-        if not status.locked or height <= 0:
+        height = int(round(FILL_HEIGHT * (1 - (status.limit or 1.0))))
+        if height <= 0:
             self._update(LOCKED, {'visible': False})
             return
+        if status.locked:
+            self._update(LOCKED, dict(_image('grey'), alpha=0.7))
+        else:
+            self._update(LOCKED, dict(_image('cyan'), alpha=0.3))
         top = cy - FILL_HEIGHT / 2
         self._update(LOCKED, {'visible': True, 'x': cx, 'y': int(round(top + height / 2)), 'height': height})
 

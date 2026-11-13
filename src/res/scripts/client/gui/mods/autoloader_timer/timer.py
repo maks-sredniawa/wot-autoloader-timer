@@ -2,7 +2,7 @@ from __future__ import division
 
 import BigWorld
 from PlayerEvents import g_playerEvents
-from debug_utils import LOG_CURRENT_EXCEPTION
+from debug_utils import LOG_CURRENT_EXCEPTION, LOG_NOTE
 from helpers import dependency
 from skeletons.gui.battle_session import IBattleSessionProvider
 
@@ -21,6 +21,7 @@ class AutoloaderTimer(object):
         self._view = None
         self._aim_view = None
         self._cooldown = aim.CooldownTracker()
+        self._last_accurate_mode = None
         self._callback_id = None
         self._crosshair = None
         self._factor = 1.0
@@ -56,6 +57,7 @@ class AutoloaderTimer(object):
     def _on_avatar_ready(self):
         self._factor = 1.0
         self._cooldown.reset()
+        self._last_accurate_mode = None
         self._cancel_tick()
         self._follow_crosshair()
         self._tick()
@@ -161,17 +163,22 @@ class AutoloaderTimer(object):
             return None
         # Private game state, as in XVM's aim timer. The game's own "ideal" circle includes the movement
         # penalty, so the best circle is rebuilt from the gun's dispersion and the stationary multiplier.
-        current, ideal, _, accurate_ideal = rotator._VehicleGunRotator__dispersionAngles
+        current, ideal, _, hot_ideal = rotator._VehicleGunRotator__dispersionAngles
         stationary_multiplier, aiming_time = player._PlayerAvatar__dispersionInfo[0], player._PlayerAvatar__dispersionInfo[5]
         gun = player._PlayerAvatar__getDetailedVehicleDescriptor().gun
-        return aim.aim_status(current, gun.shotDispersionAngle * stationary_multiplier, aiming_time,
-                              self._dual_accuracy(gun, ideal, accurate_ideal))
-
-    def _dual_accuracy(self, gun, ideal, accurate_ideal):
+        best = gun.shotDispersionAngle * stationary_multiplier
         if 'dualAccuracy' not in gun.tags:
-            return None
-        factor = gun.dualAccuracy.afterShotDispersionAngle / gun.shotDispersionAngle
-        active = aim.accurate_mode_active(ideal, accurate_ideal, factor)
+            return aim.aim_status(current, best, aiming_time)
+        # On dual accuracy guns the base dispersion is the cooled one; the after-shot value is the hot one.
+        factor = gun.shotDispersionAngle / gun.dualAccuracy.afterShotDispersionAngle
+        return aim.aim_status(current, best / factor, aiming_time, self._dual_accuracy(gun, ideal, hot_ideal, factor))
+
+    def _dual_accuracy(self, gun, ideal, hot_ideal, factor):
+        active = aim.accurate_mode_active(ideal, hot_ideal, factor)
+        if active != self._last_accurate_mode:
+            self._last_accurate_mode = active
+            LOG_NOTE('[autoloader_timer] accurate mode %s (ideal %.4f, hot ideal %.4f, factor %.3f)'
+                     % ('on' if active else 'off', ideal, hot_ideal, factor))
         cooldown = self._cooldown.update(active, BigWorld.time(), gun.dualAccuracy.coolingDelay)
         return aim.DualAccuracy(active, factor, cooldown)
 
