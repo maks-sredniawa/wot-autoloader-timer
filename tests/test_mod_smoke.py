@@ -70,6 +70,7 @@ class FakeAmmo(object):
         self.shell_change_time = 0.0
         self.shells = (30, 1)
         self.clip_state = FakeState(4.0, 11.7)
+        self.onShellsUpdated = _Event()
 
     def getGunSettings(self):
         return self.gun
@@ -100,6 +101,7 @@ class FakeCrosshair(object):
 
     def __init__(self):
         self.position = (1280, 625)
+        self.view_id = 1
         self.onCrosshairPositionChanged = _Event()
         self.onCrosshairSizeChanged = _Event()
         self.onCrosshairScaleChanged = _Event()
@@ -113,6 +115,9 @@ class FakeCrosshair(object):
 
     def getDisaredPosition(self):
         return self.position
+
+    def getViewID(self):
+        return self.view_id
 
     def move_to(self, x, y):
         self.position = (x, y)
@@ -132,13 +137,14 @@ def _install_stubs(guiflash, ammo, crosshair, player_events, callbacks, mechanic
     module('constants', TEMPERATURE_GUN_STATE=_Obj(IDLE=0, HEATING=1, COOLING=2, COOLING_DELAY=3))
     module('items').__path__ = []
     module('items.vehicle_mechanics_types',
-           VehicleMechanicKeys=_Obj(OVERHEAT_GUN='overheat', TEMPERATURE_GUN='temperature'))
+           VehicleMechanicKeys=_Obj(OVERHEAT_GUN='overheat', TEMPERATURE_GUN='temperature',
+                                                    DUAL_ACCURACY='dualAccuracy'))
     module('vehicles').__path__ = []
     module('vehicles.mechanics').__path__ = []
     module('vehicles.mechanics.mechanic_helpers', getPlayerVehicleMechanicComponent=mechanics.get,
            getMechanicFromMechanicsParams=lambda params, key: params[key])
     module('debug_utils', LOG_CURRENT_EXCEPTION=lambda: (_ for _ in ()).throw(sys.exc_info()[1]),
-           LOG_ERROR=lambda *a: None)
+           LOG_ERROR=lambda *a: None, LOG_NOTE=lambda *a: None)
 
     provider = _Obj(shared=_Obj(ammo=ammo, crosshair=crosshair))
 
@@ -161,6 +167,7 @@ def _install_stubs(guiflash, ammo, crosshair, player_events, callbacks, mechanic
     battle_control = module('gui.battle_control', avatar_getter=module(
         'gui.battle_control.avatar_getter', isPlayerOnArena=lambda: True, isVehicleAlive=lambda: True))
     battle_control.__path__ = []
+    module('gui.battle_control.battle_constants', CROSSHAIR_VIEW_ID=_Obj(ARCADE=1, SNIPER=2, STRATEGIC=3))
     controllers = module('gui.battle_control.controllers')
     controllers.__path__ = []
 
@@ -198,7 +205,7 @@ def _install_stubs(guiflash, ammo, crosshair, player_events, callbacks, mechanic
     mods.gambiter = gambiter
     module('gui.mods.gambiter.flash',
            COMPONENT_ALIGN=_Obj(CENTER='center'),
-           COMPONENT_TYPE=_Obj(LABEL='Label'),
+           COMPONENT_TYPE=_Obj(LABEL='Label', IMAGE='Image'),
            COMPONENT_EVENT=_Obj(UPDATED=_Event()))
     return provider
 
@@ -219,6 +226,10 @@ class _StubbedGameTest(unittest.TestCase):
         self.mechanics = {}
         self.provider = _install_stubs(self.guiflash, self.ammo, self.crosshair, self.events, self.callbacks,
                                        self.mechanics)
+        self.player = _Obj(gunRotator=None, isVehicleAlive=True)
+        self.clock = [100.0]
+        sys.modules['BigWorld'].player = lambda: self.player
+        sys.modules['BigWorld'].time = lambda: self.clock[0]
 
     def tearDown(self):
         os.chdir(self.cwd)
@@ -301,6 +312,34 @@ class ModSmokeTest(_StubbedGameTest):
 
         mod.fini()
         self.assertEqual(self.crosshair_handlers(new), [[], [], [], []])
+
+    def switch_view(self, view_id):
+        self.crosshair.view_id = view_id
+        self.crosshair.onCrosshairViewChanged(view_id)
+
+    def drag_panel(self, x, y):
+        self.label().update(x=x, y=y)
+        sys.modules['gui.mods.gambiter.flash'].COMPONENT_EVENT.UPDATED('maksforgeAutoloaderTimer', {'x': x, 'y': y})
+
+    def test_panel_uses_the_arcade_position_in_sniper_view_until_dragged_there(self):
+        mod = importlib.import_module("gui.mods.mod_autoloader_timer")
+        mod.init()
+        self.addCleanup(mod.fini)
+        self.crosshair.position = (1280, 720)
+        self.events.onAvatarReady()
+        self.switch_view(2)
+        self.assertEqual(self.label_position(), (0, 60))
+        self.assertNotIn('sniper', mod._timer.settings)
+
+        self.drag_panel(40, 200)
+        self.assertEqual(mod._timer.settings['sniper'], {'x': 40, 'y': 200})
+        self.assertEqual((mod._timer.settings['x'], mod._timer.settings['y']), (0, 60))
+        self.assertEqual(sys.modules['gui.mods.autoloader_timer.config'].load()['sniper'], {'x': 40, 'y': 200})
+
+        self.switch_view(1)
+        self.assertEqual(self.label_position(), (0, 60))
+        self.switch_view(2)
+        self.assertEqual(self.label_position(), (40, 200))
 
 
 def _slots(*states_and_times):
@@ -479,6 +518,147 @@ class GunCoolingTest(_StubbedGameTest):
         del chat_ctrl.sent[:]
         chat_ctrl().sendReloadingCommand()
         self.assertEqual(chat_ctrl.sent, ['game reload command'])
+
+
+
+class AimTimerTest(_StubbedGameTest):
+
+    def setUp(self):
+        super(AimTimerTest, self).setUp()
+        self.ammo.gun.hasAutoReload = lambda: False
+        self.crosshair.position = (1280, 720)
+        self.player.gunRotator = _Obj(_VehicleGunRotator__dispersionAngles=[0.4, 0.2, 0.4, 0.2])
+        self.player._PlayerAvatar__dispersionInfo = [1.0, 0.0, 0.0, 0.0, 0.0, 2.0]
+        self.player._PlayerAvatar__getDetailedVehicleDescriptor = lambda: _Obj(gun=_Obj(shotDispersionAngle=0.2,
+                                                                                         tags=frozenset()))
+        self.mod = importlib.import_module('gui.mods.mod_autoloader_timer')
+        self.mod.init()
+        self.addCleanup(self.mod.fini)
+        self.events.onAvatarReady()
+
+    def alias(self, name):
+        return getattr(sys.modules['gui.mods.autoloader_timer.aim_view'], name.upper())
+
+    def part(self, name):
+        return self.guiflash.components[self.alias(name)]
+
+    def visible(self, name):
+        return self.part(name).get('visible')
+
+    def drag(self, alias, x, y):
+        self.guiflash.components[alias].update(x=x, y=y)
+        sys.modules['gui.mods.gambiter.flash'].COMPONENT_EVENT.UPDATED(alias, {'x': x, 'y': y})
+
+    def tick(self, angles=None, at=None):
+        if angles is not None:
+            self.player.gunRotator._VehicleGunRotator__dispersionAngles = angles
+        if at is not None:
+            self.clock[0] = at
+        self.callbacks[-1]()
+
+    def test_normal_gun_aiming_shows_amber_seconds_half_bar_and_percent(self):
+        self.assertIn("color='#FCAF1A'>1.4 s<", self.part('Seconds')['text'])
+        self.assertIn("color='#FCAF1A'>50%<", self.part('Percent')['text'])
+        self.assertEqual((self.part('Track')['x'], self.part('Track')['y']), (150, 0))
+        self.assertEqual(self.part('Fill')['height'], 31)
+        self.assertEqual(self.part('Fill')['y'], 16)
+        self.assertIn('amber.png', self.part('Fill')['image'])
+        self.assertFalse(self.visible('Limit'))
+        self.assertFalse(self.visible('Locked'))
+        self.assertFalse(self.visible('Cooldown'))
+
+    def test_normal_gun_aimed_hides_seconds_and_turns_green(self):
+        self.tick([0.2, 0.2, 0.2, 0.2])
+        self.assertFalse(self.visible('Seconds'))
+        self.assertIn("color='#C7FE48'>100%<", self.part('Percent')['text'])
+        self.assertEqual(self.part('Fill')['height'], 62)
+        self.assertIn('green.png', self.part('Fill')['image'])
+
+    def test_type_71_counts_down_the_cooldown_then_aims_the_accurate_circle(self):
+        type_71_gun = _Obj(shotDispersionAngle=0.24, tags=frozenset(['dualAccuracy']),
+                           dualAccuracy=_Obj(afterShotDispersionAngle=0.4, coolingDelay=4.0))
+        self.player._PlayerAvatar__getDetailedVehicleDescriptor = lambda: _Obj(gun=type_71_gun)
+        self.tick([0.24, 0.24, 0.24, 0.4], at=90.0)
+        self.tick([0.5, 0.4, 0.5, 0.4], at=100.0)
+        self.tick(at=101.0)
+        self.assertIn("color='#A8A8A8'>3.0 s<", self.part('Cooldown')['text'])
+        self.assertIn("color='#FCAF1A'>80%<", self.part('Percent')['text'])
+        self.assertEqual(self.part('Limit')['y'], int(round(31 - 62 * 0.6)))
+        self.assertTrue(self.visible('Locked'))
+        self.assertEqual(self.part('Locked')['height'], 25)
+        self.assertIn('grey.png', self.part('Locked')['image'])
+
+        self.tick([0.3, 0.24, 0.3, 0.4], at=103.5)
+        self.assertFalse(self.visible('Locked'))
+        self.assertFalse(self.visible('Cooldown'))
+        self.assertTrue(self.visible('Limit'))
+        self.assertIn("color='#C7FE48'>133%<", self.part('Percent')['text'])
+        self.assertIn("color='#FCAF1A'>0.4 s<", self.part('Seconds')['text'])
+        self.assertIn('green.png', self.part('Fill')['image'])
+        self.assertEqual(self.part('Fill')['height'], 37)
+        self.assertEqual(self.part('Gain')['height'], 13)
+        self.assertIn('cyan.png', self.part('Gain')['image'])
+
+        self.tick([0.24, 0.24, 0.24, 0.4], at=104.0)
+        self.assertIn("color='#C7FE48'>167%<", self.part('Percent')['text'])
+        self.assertFalse(self.visible('Seconds'))
+        self.assertEqual(self.part('Gain')['height'], 25)
+
+        self.tick([0.5, 0.4, 0.5, 0.4], at=110.0)
+        self.tick(at=111.0)
+        self.assertIn('>2.5 s<', self.part('Cooldown')['text'])
+
+        self.ammo.onShellsUpdated(1234, 30, 1, 0)
+        self.clock[0] = 112.0
+        self.ammo.onShellsUpdated(1234, 29, 1, 0)
+        self.tick(at=112.5)
+        self.assertIn('>3.0 s<', self.part('Cooldown')['text'])
+
+    def test_stops_watching_shots_after_the_battle(self):
+        self.events.onAvatarBecomeNonPlayer()
+        self.assertEqual(self.ammo.onShellsUpdated.handlers, [])
+
+    def test_driving_tank_is_not_shown_as_aimed(self):
+        self.tick([0.8, 0.8, 0.8, 0.8])
+        self.assertIn("color='#FCAF1A'>25%<", self.part('Percent')['text'])
+        self.assertIn("color='#FCAF1A'>2.8 s<", self.part('Seconds')['text'])
+
+    def test_dead_tank_hides_the_bar(self):
+        self.player.isVehicleAlive = False
+        self.tick()
+        self.assertFalse(any(self.visible(name) for name in ('Track', 'Fill', 'Seconds', 'Percent')))
+
+    def test_bar_follows_the_crosshair_and_saves_where_it_is_dragged(self):
+        self.crosshair.move_to(1300, 700)
+        self.assertEqual((self.part('Track')['x'], self.part('Track')['y']), (170, -20))
+        self.drag(self.alias('Percent'), 200, 30)
+        self.assertEqual(self.mod._timer.settings['aimTimer']['x'], 180)
+        self.assertEqual(self.mod._timer.settings['aimTimer']['y'], 8)
+
+    def test_each_view_keeps_its_own_position(self):
+        self.drag(self.alias('Track'), 120, 0)
+        self.crosshair.view_id = 2
+        self.crosshair.onCrosshairViewChanged(2)
+        sniper = self.mod._timer.settings['aimTimer']['sniper']
+        self.assertEqual((self.part('Track')['x'], self.part('Track')['y']), (sniper['x'], sniper['y']))
+        self.drag(self.alias('Track'), 300, 90)
+        self.assertEqual((sniper['x'], sniper['y']), (300, 90))
+        self.crosshair.view_id = 1
+        self.crosshair.onCrosshairViewChanged(1)
+        self.assertEqual((self.part('Track')['x'], self.part('Track')['y']), (120, 0))
+        self.assertEqual(self.mod._timer.settings['aimTimer']['x'], 120)
+
+    def test_alphabetical_creation_order_stacks_the_fill_above_the_track(self):
+        aim_view = sys.modules['gui.mods.autoloader_timer.aim_view']
+        aliases = [alias for alias in self.guiflash.components if alias.startswith('maksforgeAimTimer')]
+        self.assertEqual(tuple(sorted(aliases)), aim_view.STACKING_ORDER)
+
+    def test_turned_off_creates_no_bar(self):
+        self.mod.fini()
+        self.mod._timer.settings['aimTimer']['enabled'] = False
+        sys.modules['gui.mods.autoloader_timer.config'].save(self.mod._timer.settings)
+        self.mod.init()
+        self.assertFalse([alias for alias in self.guiflash.components if alias.startswith('maksforgeAimTimer')])
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 <root>
 	<id>maksforge.autoloader_timer</id>
-	<version>0.4.0</version>
+	<version>0.5.0</version>
 	<name>Autoloader Shell Timer</name>
-	<description>Shows the load time of every shell in an autoreloader magazine, potential damage on magazine tanks, and the cooldown of Ares guns.</description>
+	<description>Shows the load time of every shell in an autoreloader magazine, potential damage on magazine tanks, the cooldown of Ares guns, and an aim timer that also shows the dual accuracy cooldown of the Type 71 line.</description>
 </root>

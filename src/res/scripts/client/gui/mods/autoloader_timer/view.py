@@ -1,3 +1,4 @@
+from gui.battle_control.battle_constants import CROSSHAIR_VIEW_ID
 from gui.mods.gambiter import g_guiFlash
 from gui.mods.gambiter.flash import COMPONENT_ALIGN, COMPONENT_EVENT, COMPONENT_TYPE
 
@@ -7,6 +8,16 @@ ALIAS = 'maksforgeAutoloaderTimer'
 SEPARATOR = '   '
 
 _SHADOW = {'color': 0x000000, 'alpha': 0.8, 'blurX': 2, 'blurY': 2, 'strength': 2, 'quality': 2}
+VIEW_POSITIONS = {CROSSHAIR_VIEW_ID.SNIPER: 'sniper', CROSSHAIR_VIEW_ID.STRATEGIC: 'strategic'}
+
+
+def view_offset(settings, view_id):
+    return settings.get(VIEW_POSITIONS.get(view_id), settings)
+
+
+def dragged_offset(settings, view_id):
+    key = VIEW_POSITIONS.get(view_id)
+    return settings if key is None else settings.setdefault(key, {})
 
 
 def _magazine_summary(loaded, size, shell_damage, color):
@@ -54,6 +65,7 @@ class PanelView(object):
         self._on_moved = on_moved
         self._shown = None
         self._anchor = (0, 0)
+        self._view_id = None
         props = {
             'text': '',
             'isHtml': True,
@@ -84,14 +96,16 @@ class PanelView(object):
     def hide(self):
         self.show(None)
 
-    def set_anchor(self, x, y):
-        if (x, y) == self._anchor:
+    def set_anchor(self, x, y, view_id=None):
+        if ((x, y), view_id) == (self._anchor, self._view_id):
             return
         self._anchor = (x, y)
+        self._view_id = view_id
         g_guiFlash.updateComponent(ALIAS, self._position())
 
     def _position(self):
-        return {'x': self._anchor[0] + self._settings['x'], 'y': self._anchor[1] + self._settings['y']}
+        offset = view_offset(self._settings, self._view_id)
+        return {'x': self._anchor[0] + offset['x'], 'y': self._anchor[1] + offset['y']}
 
     def _html(self, segments):
         parts = ["<font color='#%s'>%s</font>" % (color, text) for text, color in segments]
@@ -101,6 +115,7 @@ class PanelView(object):
     def _on_component_updated(self, alias, props):
         if alias != ALIAS or 'x' not in props or 'y' not in props:
             return
-        self._settings['x'] = int(props['x']) - self._anchor[0]
-        self._settings['y'] = int(props['y']) - self._anchor[1]
+        offset = dragged_offset(self._settings, self._view_id)
+        offset['x'] = int(props['x']) - self._anchor[0]
+        offset['y'] = int(props['y']) - self._anchor[1]
         self._on_moved()

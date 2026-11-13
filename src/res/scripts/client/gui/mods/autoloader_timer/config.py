@@ -1,4 +1,5 @@
 import codecs
+import copy
 import json
 import os
 
@@ -6,6 +7,7 @@ from debug_utils import LOG_CURRENT_EXCEPTION
 
 CONFIG_DIR = os.path.join('mods', 'configs', 'autoloader_timer')
 CONFIG_PATH = os.path.join(CONFIG_DIR, 'config.json')
+VIEW_POSITION_KEYS = ('sniper', 'strategic')
 
 DEFAULTS = {
     'enabled': True,
@@ -14,6 +16,13 @@ DEFAULTS = {
     'fontSize': 14,
     'hideWhenFull': False,
     'reloadChatLine': True,
+    'aimTimer': {
+        'enabled': True,
+        'x': 150,
+        'y': 0,
+        'sniper': {'x': 120, 'y': 60},
+        'strategic': {'x': 180, 'y': 70},
+    },
     'colors': {
         'count': 'D8D8D8',
         'loaded': 'C7FE48',
@@ -25,12 +34,14 @@ DEFAULTS = {
 
 
 def _merged(defaults, loaded):
-    result = dict(defaults)
+    result = copy.deepcopy(defaults)
     for key, value in loaded.items():
         if key in defaults and isinstance(defaults[key], dict) and isinstance(value, dict):
             result[key] = _merged(defaults[key], value)
         elif key in defaults:
             result[key] = value
+        elif key in VIEW_POSITION_KEYS and isinstance(value, dict) and 'x' in value and 'y' in value:
+            result[key] = {'x': value['x'], 'y': value['y']}
     return result
 
 

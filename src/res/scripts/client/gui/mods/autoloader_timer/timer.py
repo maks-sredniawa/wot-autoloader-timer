@@ -2,11 +2,12 @@ from __future__ import division
 
 import BigWorld
 from PlayerEvents import g_playerEvents
-from debug_utils import LOG_CURRENT_EXCEPTION
+from debug_utils import LOG_CURRENT_EXCEPTION, LOG_NOTE
 from helpers import dependency
 from skeletons.gui.battle_session import IBattleSessionProvider
 
-from . import config, gun_cooling, schedule
+from . import aim, config, gun_cooling, schedule
+from .aim_view import AimBarView
 from .view import PanelView, format_cooling, format_magazine, format_segments
 
 TICK_SECONDS = 0.1
@@ -18,6 +19,11 @@ class AutoloaderTimer(object):
     def __init__(self):
         self._settings = config.load()
         self._view = None
+        self._aim_view = None
+        self._cooldown = aim.CooldownTracker()
+        self._last_accurate_mode = None
+        self._shell_counts = {}
+        self._watched_ammo = None
         self._callback_id = None
         self._crosshair = None
         self._factor = 1.0
@@ -26,6 +32,8 @@ class AutoloaderTimer(object):
         if not self._settings['enabled']:
             return
         self._view = PanelView(self._settings, self._on_moved)
+        if self._settings['aimTimer']['enabled']:
+            self._aim_view = AimBarView(self._settings, self._on_moved)
         g_playerEvents.onAvatarReady += self._on_avatar_ready
         g_playerEvents.onAvatarBecomeNonPlayer += self._on_avatar_left
 
@@ -34,9 +42,13 @@ class AutoloaderTimer(object):
         g_playerEvents.onAvatarBecomeNonPlayer -= self._on_avatar_left
         self._cancel_tick()
         self._unfollow_crosshair()
+        self._unwatch_shots()
         if self._view is not None:
             self._view.destroy()
             self._view = None
+        if self._aim_view is not None:
+            self._aim_view.destroy()
+            self._aim_view = None
 
     @property
     def settings(self):
@@ -47,15 +59,21 @@ class AutoloaderTimer(object):
 
     def _on_avatar_ready(self):
         self._factor = 1.0
+        self._cooldown.reset()
+        self._last_accurate_mode = None
         self._cancel_tick()
         self._follow_crosshair()
+        self._watch_shots()
         self._tick()
 
     def _on_avatar_left(self):
         self._cancel_tick()
         self._unfollow_crosshair()
+        self._unwatch_shots()
         if self._view is not None:
             self._view.hide()
+        if self._aim_view is not None:
+            self._aim_view.hide()
 
     def _cancel_tick(self):
         if self._callback_id is not None:
@@ -65,13 +83,36 @@ class AutoloaderTimer(object):
     def _tick(self):
         self._callback_id = BigWorld.callback(TICK_SECONDS, self._tick)
         try:
-            self._render()
+            self._view.show(self._segments())
         except Exception:
             LOG_CURRENT_EXCEPTION()
             self._view.hide()
+        if self._aim_view is not None:
+            try:
+                self._aim_view.show(self._aim_status())
+            except Exception:
+                LOG_CURRENT_EXCEPTION()
+                self._aim_view.hide()
 
-    def _render(self):
-        self._view.show(self._segments())
+    def _watch_shots(self):
+        self._unwatch_shots()
+        ammo = self._sessionProvider.shared.ammo
+        if ammo is None:
+            return
+        self._watched_ammo = ammo
+        self._shell_counts = {}
+        ammo.onShellsUpdated += self._on_shells_updated
+
+    def _unwatch_shots(self):
+        if self._watched_ammo is not None:
+            self._watched_ammo.onShellsUpdated -= self._on_shells_updated
+            self._watched_ammo = None
+
+    def _on_shells_updated(self, shell_cd, quantity, *_):
+        previous = self._shell_counts.get(shell_cd)
+        self._shell_counts[shell_cd] = quantity
+        if previous is not None and quantity < previous:
+            self._cooldown.shot(BigWorld.time())
 
     def _crosshair_events(self, crosshair):
         return (crosshair.onCrosshairPositionChanged, crosshair.onCrosshairSizeChanged,
@@ -96,7 +137,11 @@ class AutoloaderTimer(object):
 
     def _on_crosshair_changed(self, *_):
         try:
-            self._view.set_anchor(*self._crosshair_offset(self._crosshair))
+            x, y = self._crosshair_offset(self._crosshair)
+            view_id = self._crosshair.getViewID()
+            self._view.set_anchor(x, y, view_id)
+            if self._aim_view is not None:
+                self._aim_view.set_anchor(x, y, view_id)
         except Exception:
             LOG_CURRENT_EXCEPTION()
 
@@ -136,6 +181,34 @@ class AutoloaderTimer(object):
         if status is None or (self._settings['hideWhenFull'] and status.state == gun_cooling.COLD):
             return None
         return format_cooling(status, self._settings)
+
+    def _aim_status(self):
+        player = BigWorld.player()
+        rotator = getattr(player, 'gunRotator', None)
+        if rotator is None or not player.isVehicleAlive:
+            return None
+        # Private game state, as in XVM's aim timer. The game's own "ideal" circle includes the movement
+        # penalty, so the best circle is rebuilt from the gun's dispersion and the stationary multiplier.
+        current, ideal, _, hot_ideal = rotator._VehicleGunRotator__dispersionAngles
+        if min(current, ideal, hot_ideal) <= 0:
+            return None
+        stationary_multiplier, aiming_time = player._PlayerAvatar__dispersionInfo[0], player._PlayerAvatar__dispersionInfo[5]
+        gun = player._PlayerAvatar__getDetailedVehicleDescriptor().gun
+        best = gun.shotDispersionAngle * stationary_multiplier
+        if 'dualAccuracy' not in gun.tags:
+            return aim.aim_status(current, best, aiming_time)
+        # On dual accuracy guns the base dispersion is the cooled one; the after-shot value is the hot one.
+        factor = gun.shotDispersionAngle / gun.dualAccuracy.afterShotDispersionAngle
+        return aim.aim_status(current, best / factor, aiming_time, self._dual_accuracy(gun, ideal, hot_ideal, factor))
+
+    def _dual_accuracy(self, gun, ideal, hot_ideal, factor):
+        active = aim.accurate_mode_active(ideal, hot_ideal, factor)
+        if active != self._last_accurate_mode:
+            self._last_accurate_mode = active
+            LOG_NOTE('[autoloader_timer] accurate mode %s (ideal %.4f, hot ideal %.4f, factor %.3f, base delay %.2f)'
+                     % ('on' if active else 'off', ideal, hot_ideal, factor, gun.dualAccuracy.coolingDelay))
+        cooldown = self._cooldown.update(active, BigWorld.time(), gun.dualAccuracy.coolingDelay)
+        return aim.DualAccuracy(active, factor, cooldown)
 
     def slots(self):
         ammo = self._sessionProvider.shared.ammo
