@@ -4,9 +4,7 @@ import BigWorld
 from PlayerEvents import g_playerEvents
 from debug_utils import LOG_CURRENT_EXCEPTION
 from helpers import dependency
-from items.vehicle_mechanics_types import VehicleMechanicKeys
 from skeletons.gui.battle_session import IBattleSessionProvider
-from vehicles.mechanics.mechanic_helpers import getPlayerVehicleMechanicComponent
 
 from . import aim, config, gun_cooling, schedule
 from .aim_view import AimBarView
@@ -163,20 +161,19 @@ class AutoloaderTimer(object):
             return None
         # Private game state, as in XVM's aim timer. The game's own "ideal" circle includes the movement
         # penalty, so the best circle is rebuilt from the gun's dispersion and the stationary multiplier.
-        current = rotator._VehicleGunRotator__dispersionAngles[0]
+        current, ideal, _, accurate_ideal = rotator._VehicleGunRotator__dispersionAngles
         stationary_multiplier, aiming_time = player._PlayerAvatar__dispersionInfo[0], player._PlayerAvatar__dispersionInfo[5]
         gun = player._PlayerAvatar__getDetailedVehicleDescriptor().gun
         return aim.aim_status(current, gun.shotDispersionAngle * stationary_multiplier, aiming_time,
-                              self._dual_accuracy(player))
+                              self._dual_accuracy(gun, ideal, accurate_ideal))
 
-    def _dual_accuracy(self, player):
-        component = getPlayerVehicleMechanicComponent(VehicleMechanicKeys.DUAL_ACCURACY)
-        if component is None:
+    def _dual_accuracy(self, gun, ideal, accurate_ideal):
+        if 'dualAccuracy' not in gun.tags:
             return None
-        active = component.isActive()
-        base_delay = player.vehicleTypeDescriptor.gun.dualAccuracy.coolingDelay
-        cooldown = self._cooldown.update(active, BigWorld.time(), base_delay)
-        return aim.DualAccuracy(active, component.getDualAccuracyFactor(), cooldown)
+        factor = gun.dualAccuracy.afterShotDispersionAngle / gun.shotDispersionAngle
+        active = aim.accurate_mode_active(ideal, accurate_ideal, factor)
+        cooldown = self._cooldown.update(active, BigWorld.time(), gun.dualAccuracy.coolingDelay)
+        return aim.DualAccuracy(active, factor, cooldown)
 
     def slots(self):
         ammo = self._sessionProvider.shared.ammo

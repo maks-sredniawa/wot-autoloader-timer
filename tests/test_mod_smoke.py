@@ -487,18 +487,6 @@ class GunCoolingTest(_StubbedGameTest):
 
 
 
-class FakeDualAccuracy(object):
-
-    def __init__(self):
-        self.active = True
-
-    def isActive(self):
-        return self.active
-
-    def getDualAccuracyFactor(self):
-        return 0.6
-
-
 class AimTimerTest(_StubbedGameTest):
 
     def setUp(self):
@@ -507,8 +495,8 @@ class AimTimerTest(_StubbedGameTest):
         self.crosshair.position = (1280, 720)
         self.player.gunRotator = _Obj(_VehicleGunRotator__dispersionAngles=[0.4, 0.2, 0.4, 0.2])
         self.player._PlayerAvatar__dispersionInfo = [1.0, 0.0, 0.0, 0.0, 0.0, 2.0]
-        self.player._PlayerAvatar__getDetailedVehicleDescriptor = lambda: _Obj(gun=_Obj(shotDispersionAngle=0.2))
-        self.player.vehicleTypeDescriptor = _Obj(gun=_Obj(dualAccuracy=_Obj(coolingDelay=4.0)))
+        self.player._PlayerAvatar__getDetailedVehicleDescriptor = lambda: _Obj(gun=_Obj(shotDispersionAngle=0.2,
+                                                                                         tags=frozenset()))
         self.mod = importlib.import_module('gui.mods.mod_autoloader_timer')
         self.mod.init()
         self.addCleanup(self.mod.fini)
@@ -546,11 +534,10 @@ class AimTimerTest(_StubbedGameTest):
         self.assertIn('green.png', self.part('Fill')['image'])
 
     def test_type_71_counts_down_the_cooldown_then_aims_the_accurate_circle(self):
-        dual = FakeDualAccuracy()
-        self.mechanics['dualAccuracy'] = dual
-        self.player._PlayerAvatar__getDetailedVehicleDescriptor = lambda: _Obj(gun=_Obj(shotDispersionAngle=0.4))
+        type_71_gun = _Obj(shotDispersionAngle=0.4, tags=frozenset(['dualAccuracy']),
+                           dualAccuracy=_Obj(afterShotDispersionAngle=0.24, coolingDelay=4.0))
+        self.player._PlayerAvatar__getDetailedVehicleDescriptor = lambda: _Obj(gun=type_71_gun)
         self.tick([0.24, 0.24, 0.24, 0.24], at=90.0)
-        dual.active = False
         self.tick([0.5, 0.4, 0.5, 0.24], at=100.0)
         self.tick(at=101.0)
         self.assertIn("color='#A8A8A8'>3.0 s<", self.part('Cooldown')['text'])
@@ -559,7 +546,6 @@ class AimTimerTest(_StubbedGameTest):
         self.assertTrue(self.visible('Locked'))
         self.assertEqual(self.part('Locked')['height'], 25)
 
-        dual.active = True
         self.tick([0.4, 0.24, 0.4, 0.24], at=103.5)
         self.assertFalse(self.visible('Locked'))
         self.assertFalse(self.visible('Cooldown'))
@@ -567,7 +553,6 @@ class AimTimerTest(_StubbedGameTest):
         self.assertIn("color='#6FD8FF'>", self.part('Percent')['text'])
         self.assertIn('cyan.png', self.part('Fill')['image'])
 
-        dual.active = False
         self.tick([0.5, 0.4, 0.5, 0.24], at=110.0)
         self.tick(at=111.0)
         self.assertIn('>2.5 s<', self.part('Cooldown')['text'])

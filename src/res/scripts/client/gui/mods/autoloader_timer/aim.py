@@ -44,6 +44,11 @@ def _ratio(ideal, current):
     return max(0.0, min(1.0, ideal / current))
 
 
+def accurate_mode_active(ideal, accurate_ideal, factor):
+    # The game shrinks its ideal circle to the accurate one only while the mode is on.
+    return accurate_ideal > ideal * (1 + factor) / 2
+
+
 def aim_status(current, stationary_best, aiming_time, dual=None):
     accurate_ideal = stationary_best * dual.factor if dual is not None else stationary_best
     ideal = accurate_ideal if dual is not None and dual.active else stationary_best
