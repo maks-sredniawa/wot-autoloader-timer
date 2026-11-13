@@ -9,6 +9,7 @@ _PREFIX = 'maksforgeAimTimer'
 TRACK = _PREFIX + 'Track'
 LOCKED = _PREFIX + 'Locked'
 FILL = _PREFIX + 'Fill'
+GAIN = _PREFIX + 'Gain'
 LIMIT = _PREFIX + 'Limit'
 SECONDS = _PREFIX + 'Seconds'
 PERCENT = _PREFIX + 'Percent'
@@ -22,7 +23,6 @@ LABEL_GAP = 10
 COOLDOWN_X = 26
 
 _IMAGE_DIR = 'gui/maps/autoloader_timer/'
-_FILL_IMAGES = {aim.AIMING: 'amber', aim.ACCURATE: 'cyan', aim.AIMED: 'green'}
 _SHADOW = {'color': 0x000000, 'alpha': 0.8, 'blurX': 2, 'blurY': 2, 'strength': 2, 'quality': 2}
 _LABEL_OFFSETS = {
     SECONDS: (0, -(TRACK_SIZE[1] // 2 + LABEL_GAP)),
@@ -39,8 +39,8 @@ def _image(name):
     return {'image': '../../' + path, 'imageAlt': 'img://' + path}
 
 
-def phase_color(phase, colors):
-    return {aim.AIMING: colors['loading'], aim.ACCURATE: colors['accurate'], aim.AIMED: colors['loaded']}[phase]
+def normal_aim_reached(status):
+    return status.percent >= 0.999
 
 
 def format_seconds(status):
@@ -48,7 +48,7 @@ def format_seconds(status):
 
 
 def format_percent(status):
-    return '%d%%' % int(status.percent * 100)
+    return '%d%%' % int(round(status.percent * 100))
 
 
 def format_cooldown(status):
@@ -64,12 +64,12 @@ class AimBarView(object):
         self._view_id = None
         self._shown = {}
         self._status = None
-        self._fill_image = None
         centered = {'alignX': COMPONENT_ALIGN.CENTER, 'alignY': COMPONENT_ALIGN.CENTER, 'visible': False}
         self._create(TRACK, COMPONENT_TYPE.IMAGE, dict(centered, alpha=0.5, drag=True, width=TRACK_SIZE[0],
                                                        height=TRACK_SIZE[1], **_image('black')))
         self._create(LOCKED, COMPONENT_TYPE.IMAGE, dict(centered, alpha=0.35, width=FILL_WIDTH, **_image('grey')))
         self._create(FILL, COMPONENT_TYPE.IMAGE, dict(centered, width=FILL_WIDTH))
+        self._create(GAIN, COMPONENT_TYPE.IMAGE, dict(centered, width=FILL_WIDTH, **_image('cyan')))
         self._create(LIMIT, COMPONENT_TYPE.IMAGE, dict(centered, width=LIMIT_SIZE[0], height=LIMIT_SIZE[1],
                                                        **_image('light')))
         for alias in (SECONDS, PERCENT, COOLDOWN):
@@ -106,25 +106,28 @@ class AimBarView(object):
         self._show_limit(status, cx, bottom)
         self._show_locked(status, cx, cy, bottom)
         colors = self._settings['colors']
-        color = phase_color(status.phase, colors)
-        self._show_label(SECONDS, format_seconds(status), color, self._settings['fontSize'],
+        percent_color = colors['loaded'] if normal_aim_reached(status) else colors['loading']
+        self._show_label(SECONDS, format_seconds(status), colors['loading'], self._settings['fontSize'],
                          self._label_position(SECONDS))
-        self._show_label(PERCENT, format_percent(status), color, self._settings['fontSize'] - 1,
+        self._show_label(PERCENT, format_percent(status), percent_color, self._settings['fontSize'] - 1,
                          self._label_position(PERCENT))
         locked_middle = (cy - FILL_HEIGHT / 2 + bottom - FILL_HEIGHT * (status.limit or 0)) / 2
         self._show_label(COOLDOWN, format_cooldown(status), colors['shellTime'], self._settings['fontSize'] - 2,
                          (cx + COOLDOWN_X, int(round(locked_middle))))
 
     def _show_fill(self, status, cx, bottom):
-        height = int(round(FILL_HEIGHT * status.fill))
+        normal = int(round(FILL_HEIGHT * min(status.fill, status.limit or 1.0)))
+        gain = int(round(FILL_HEIGHT * status.fill)) - normal
+        self._show_segment(FILL, normal, cx, bottom, 'green' if normal_aim_reached(status) else 'amber')
+        self._show_segment(GAIN, gain, cx, bottom - normal)
+
+    def _show_segment(self, alias, height, cx, bottom, image=None):
         if height <= 0:
-            self._update(FILL, {'visible': False})
+            self._update(alias, {'visible': False})
             return
-        image = _FILL_IMAGES[status.phase]
-        if image != self._fill_image:
-            self._fill_image = image
-            self._update(FILL, _image(image))
-        self._update(FILL, {'visible': True, 'x': cx, 'y': int(round(bottom - height / 2)), 'height': height})
+        if image is not None:
+            self._update(alias, _image(image))
+        self._update(alias, {'visible': True, 'x': cx, 'y': int(round(bottom - height / 2)), 'height': height})
 
     def _show_limit(self, status, cx, bottom):
         if status.limit is None:

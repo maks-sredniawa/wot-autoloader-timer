@@ -41,10 +41,10 @@ A small bar to the right of the crosshair shows how far your gun has aimed, on e
 
 On guns with dual accuracy, the circle gets much smaller once the gun has cooled after a shot. The game shows a second circle for it but no timer. The bar shows both stages:
 
-- **A tick** marks the best the hot gun can do: the accurate circle's size divided by the normal one's, about 60% on the Type 71.
-- **While the gun cools**, the part above the tick is grey and locked, with the seconds until the accurate mode starts next to it. The part below the tick fills like a normal aim timer and turns green when the normal circle is fully aimed.
-- **Once the accurate mode is on**, the lock disappears and the bar fills on in cyan, with the seconds and percentage of the accurate circle.
-- **Fully green to the top** means the best shot the gun can make.
+- **100%** is the normal gun fully aimed, as on any tank. A tick on the bar marks it.
+- **While the gun cools**, the part above the tick is grey and locked, with the seconds until the accurate mode starts next to it. The part below the tick fills like a normal aim timer and turns green at 100%.
+- **Once the accurate mode is on**, the lock disappears and the extra above 100% fills in cyan. The percentage keeps counting past 100% up to the gun's real gain: the hot circle divided by the accurate one, 167% on the Type 71 (0.40 against 0.24).
+- **A full bar with no seconds left** is the best shot the gun can make.
 
 The game doesn't tell the client how long the cooldown is after crew skills, so the first countdown of a battle uses the gun's base delay. After one full cycle the mod counts with the delay it measured. The countdown starts when the server switches the accurate mode off, so ping shifts it slightly.
 
@@ -77,7 +77,7 @@ The first battle writes `mods/configs/autoloader_timer/config.json`:
 | `hideWhenFull` | `false` | Hide the panel while the magazine is full or an Ares gun is cold |
 | `reloadChatLine` | `true` | Replace the reload quick command with the magazine status line in autoreloaders |
 | `aimTimer` | | `enabled` (`true`) shows the aim timer. `x`, `y` (`150`, `0`) are its offset from the crosshair in arcade view; `sniper` (`120`, `60`) and `strategic` (`180`, `70`) hold the offsets for the zoomed and artillery views. |
-| `colors` | | Hex colours for the count, a full magazine, the loading shell, the queued shells, the per-shell times and the accurate mode (`accurate`). The Ares line and the aim timer's text reuse them. The bar's own colours are built in. |
+| `colors` | | Hex colours for the count, a full magazine, the loading shell, the queued shells, and the per-shell times. The Ares line and the aim timer's text reuse them. The bar's own colours are built in. |
 
 To move the panel or the aim timer, hold Ctrl to show the cursor and drag it (the aim timer by its bar, seconds or percentage). The new position is saved. The aim timer keeps a separate position for arcade, sniper and artillery view, so drag it once in each.
 

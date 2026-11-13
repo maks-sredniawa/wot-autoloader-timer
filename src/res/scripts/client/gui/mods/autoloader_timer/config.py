@@ -22,7 +22,6 @@ DEFAULTS = {
         'strategic': {'x': 180, 'y': 70},
     },
     'colors': {
-        'accurate': '6FD8FF',
         'count': 'D8D8D8',
         'loaded': 'C7FE48',
         'loading': 'FCAF1A',

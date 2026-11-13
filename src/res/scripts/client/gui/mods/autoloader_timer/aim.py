@@ -56,10 +56,11 @@ def aim_status(current, stationary_best, aiming_time, dual=None):
     aimed = seconds < AIMED_BELOW_SECONDS
     if aimed:
         current = ideal
-    percent = _ratio(ideal, current)
     if dual is None:
+        percent = _ratio(ideal, current)
         return AimStatus(AIMED if aimed else AIMING, percent, percent, seconds)
     fill = _ratio(accurate_ideal, current)
+    percent = fill / dual.factor
     if dual.active:
         phase = AIMED if aimed else ACCURATE
         return AimStatus(phase, fill, percent, seconds, limit=dual.factor)
