@@ -14,12 +14,12 @@ SECONDS = _PREFIX + 'Seconds'
 PERCENT = _PREFIX + 'Percent'
 COOLDOWN = _PREFIX + 'Cooldown'
 
-TRACK_SIZE = (6, 64)
-FILL_WIDTH = 4
+TRACK_SIZE = (10, 64)
+FILL_WIDTH = 8
 FILL_HEIGHT = 62
-LIMIT_SIZE = (10, 2)
+LIMIT_SIZE = (16, 2)
 LABEL_GAP = 10
-COOLDOWN_X = 22
+COOLDOWN_X = 26
 
 _IMAGE_DIR = 'gui/maps/autoloader_timer/'
 _FILL_IMAGES = {aim.AIMING: 'amber', aim.ACCURATE: 'cyan', aim.AIMED: 'green'}
