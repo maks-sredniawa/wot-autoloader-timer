@@ -211,10 +211,54 @@ def _install_stubs(guiflash, ammo, crosshair, player_events, callbacks, mechanic
     return provider
 
 
+class FakeModsSettingsApi(object):
+
+    def __init__(self):
+        self.templates = {}
+        self.settings = {}
+        self.callbacks = []
+
+    def setModTemplate(self, linkage, template, callback, buttonHandler=None):
+        if self.templates.get(linkage) != template:
+            self.templates[linkage] = template
+            values = dict((c['varName'], c['value']) for column in ('column1', 'column2')
+                          for c in template.get(column, []) if 'varName' in c)
+            values['enabled'] = template['enabled']
+            self.settings[linkage] = values
+        self.callbacks.append(callback)
+        return dict(self.settings[linkage])
+
+    def updateModSettings(self, linkage, newSettings):
+        self.settings[linkage] = newSettings
+        for callback in list(self.callbacks):
+            callback(linkage, newSettings)
+
+
+def _control(type, text, varName, value, tooltip=None, **extra):
+    return dict(extra, type=type, text=text, varName=varName, value=value, tooltip=tooltip)
+
+
+def _install_mods_settings_api():
+    api = FakeModsSettingsApi()
+    templates = types.ModuleType('gui.modsSettingsApi.templates')
+    templates.createLabel = lambda text, tooltip=None, tooltipIcon=None: {'type': 'Label', 'text': text}
+    templates.createCheckbox = lambda text, varName, value, tooltip=None, tooltipIcon=None, button=None: _control(
+        'CheckBox', text, varName, value, tooltip)
+    templates.createSlider = lambda text, varName, value, min, max, interval, format='{{value}}', tooltip=None, \
+        tooltipIcon=None, button=None, width=None: _control('Slider', text, varName, value, tooltip, minimum=min,
+                                                             maximum=max, snapInterval=interval, format=format)
+    package = types.ModuleType('gui.modsSettingsApi')
+    package.g_modsSettingsApi = api
+    package.templates = templates
+    sys.modules['gui.modsSettingsApi'] = package
+    sys.modules['gui.modsSettingsApi.templates'] = templates
+    return api
+
+
 class _StubbedGameTest(unittest.TestCase):
 
     def setUp(self):
-        for name in [name for name in sys.modules if name.startswith('gui.mods.')]:
+        for name in [name for name in sys.modules if name.startswith('gui.mods')]:
             del sys.modules[name]
         self.cwd = os.getcwd()
         self.tmp = tempfile.mkdtemp()
@@ -366,6 +410,16 @@ class ModSmokeTest(_StubbedGameTest):
         self.assertTrue(migrated['aimTimer']['enabled'])
         self.assertTrue(os.path.isfile(legacy_path))
 
+    def test_runs_from_config_json_without_mods_settings_api(self):
+        self.assertNotIn('gui.modsSettingsApi', sys.modules)
+        mod = importlib.import_module("gui.mods.mod_gunner_hud")
+        mod.init()
+        self.addCleanup(mod.fini)
+        self.events.onAvatarReady()
+        self.assertTrue(self.label()['visible'])
+        settings_window = sys.modules['gui.mods.gunner_hud.settings_window']
+        self.assertFalse(settings_window.register(mod._timer.settings, lambda values: None))
+
     def test_existing_gunner_hud_config_wins_over_the_autoloader_timer_one(self):
         for name, position in [('autoloader_timer', {'x': 12, 'y': 141}), ('gunner_hud', {'x': -30, 'y': 90})]:
             os.makedirs(os.path.join('mods', 'configs', name))
@@ -399,7 +453,7 @@ class ReloadChatTest(_StubbedGameTest):
         self.reload_chat = importlib.import_module('gui.mods.gunner_hud.reload_chat')
         self.chat_ctrl = sys.modules['gui.battle_control.controllers.chat_cmd_ctrl'].ChatCommandsController
         self.slots = []
-        self.reload_chat.install(lambda: self.slots)
+        self.reload_chat.install(lambda: self.slots, lambda: True)
 
     def press_reload(self):
         self.chat_ctrl().sendReloadingCommand()
@@ -488,6 +542,11 @@ class MagazineDamageTest(_StubbedGameTest):
         text = self.render(30, 0)['text']
         self.assertTrue(text.endswith("<font color='#D8D8D8'>0/3</font></font>"))
 
+    def test_magazine_line_off_hides_a_regular_magazine(self):
+        self.use_regular_magazine()
+        self.mod._timer.settings['magazineLine'] = False
+        self.assertFalse(self.render(20, 4)['visible'])
+
     def test_single_shot_gun_stays_hidden(self):
         self.ammo.gun.hasAutoReload = lambda: False
         self.assertFalse(self.render(30, 1)['visible'])
@@ -551,6 +610,10 @@ class GunCoolingTest(_StubbedGameTest):
         self.mod._timer.settings['hideWhenFull'] = True
         self.assertFalse(self.set_gun(self.IDLE)['visible'])
         self.assertTrue(self.set_gun(self.COOLING_DELAY, 40.0, cooling_time=12.4)['visible'])
+
+    def test_ares_line_off_hides_the_line(self):
+        self.mod._timer.settings['aresLine'] = False
+        self.assertFalse(self.set_gun(self.COOLING_DELAY, 40.0, cooling_time=12.4)['visible'])
 
     def test_no_loaded_shell_on_a_cold_gun_hides_the_line(self):
         self.ammo.getCurrentShellCD = lambda: None
@@ -703,6 +766,129 @@ class AimTimerTest(_StubbedGameTest):
         sys.modules['gui.mods.gunner_hud.config'].save(self.mod._timer.settings)
         self.mod.init()
         self.assertFalse([alias for alias in self.guiflash.components if alias.startswith('maksforgeGunnerHudAim')])
+
+
+LINKAGE = 'maksforge.gunner_hud'
+CONFIG_PATH = os.path.join('mods', 'configs', 'gunner_hud', 'config.json')
+
+
+class SettingsWindowTest(_StubbedGameTest):
+
+    def setUp(self):
+        super(SettingsWindowTest, self).setUp()
+        self.api = _install_mods_settings_api()
+        self.chat_ctrl = sys.modules['gui.battle_control.controllers.chat_cmd_ctrl'].ChatCommandsController
+
+    def start_game(self, config=None):
+        if config is not None:
+            os.makedirs(os.path.dirname(CONFIG_PATH))
+            with open(CONFIG_PATH, 'w') as f:
+                json.dump(config, f)
+        self.mod = importlib.import_module('gui.mods.mod_gunner_hud')
+        self.mod.init()
+        self.addCleanup(self.mod.fini)
+        self.events.onAvatarReady()
+
+    def restart_game(self):
+        self.mod.fini()
+        for name in [name for name in sys.modules if 'gunner_hud' in name]:
+            del sys.modules[name]
+        self.start_game()
+
+    def change(self, **values):
+        self.api.updateModSettings(LINKAGE, dict(self.api.settings[LINKAGE], **values))
+
+    def label(self):
+        return self.guiflash.components.get('maksforgeGunnerHud', {})
+
+    def aim_parts(self):
+        return [alias for alias in self.guiflash.components if alias.startswith('maksforgeGunnerHudAim')]
+
+    def saved(self):
+        with open(CONFIG_PATH) as f:
+            return json.load(f)
+
+    def press_reload(self):
+        del self.chat_ctrl.sent[:]
+        self.chat_ctrl().sendReloadingCommand()
+        return self.chat_ctrl.sent
+
+    def test_registers_the_page_with_the_config_values(self):
+        self.start_game()
+        template = self.api.templates[LINKAGE]
+        self.assertEqual(template['modDisplayName'], 'Gunner HUD')
+        controls = dict((c['varName'], c) for column in ('column1', 'column2') for c in template[column]
+                        if 'varName' in c)
+        self.assertEqual(sorted(controls), ['aimTimer', 'aresLine', 'autoreloaderLine', 'fontSize', 'hideWhenFull',
+                                            'magazineLine', 'reloadChatLine'])
+        self.assertEqual((controls['fontSize']['minimum'], controls['fontSize']['maximum']), (10, 24))
+        self.assertEqual(self.api.settings[LINKAGE], {
+            'enabled': True, 'aimTimer': True, 'autoreloaderLine': True, 'magazineLine': True, 'aresLine': True,
+            'reloadChatLine': True, 'hideWhenFull': False, 'fontSize': 14})
+
+    def test_a_change_on_the_page_applies_at_once_and_is_saved_to_config_json(self):
+        self.start_game()
+        self.assertTrue(self.aim_parts())
+        self.change(fontSize=18.0, aimTimer=False, hideWhenFull=True)
+        settings = self.mod._timer.settings
+        self.assertEqual((settings['fontSize'], settings['aimTimer']['enabled'], settings['hideWhenFull']),
+                         (18, False, True))
+        self.assertFalse(self.aim_parts())
+        self.callbacks[-1]()
+        self.assertIn("size='18'", self.label()['text'])
+
+        saved = self.saved()
+        self.assertEqual((saved['fontSize'], saved['aimTimer']['enabled'], saved['hideWhenFull']), (18, False, True))
+        self.assertEqual((saved['x'], saved['y'], saved['aimTimer']['x']), (0, 60, 150))
+
+        self.change(aimTimer=True)
+        self.assertTrue(self.aim_parts())
+
+    def test_autoreloader_line_off_hides_the_shell_times(self):
+        self.start_game()
+        self.assertTrue(self.label()['visible'])
+        self.change(autoreloaderLine=False)
+        self.callbacks[-1]()
+        self.assertFalse(self.label()['visible'])
+        self.assertFalse(self.saved()['autoreloaderLine'])
+        self.change(autoreloaderLine=True)
+        self.callbacks[-1]()
+        self.assertTrue(self.label()['visible'])
+
+    def test_config_json_wins_over_values_the_page_kept(self):
+        self.start_game()
+        self.api.settings[LINKAGE]['fontSize'] = 20
+        self.restart_game()
+        self.assertEqual(self.api.settings[LINKAGE]['fontSize'], 14)
+        self.assertEqual(self.mod._timer.settings['fontSize'], 14)
+
+    def test_a_hand_edited_config_json_shows_on_the_page(self):
+        self.start_game({'fontSize': 30, 'reloadChatLine': False})
+        self.assertEqual(self.api.settings[LINKAGE]['fontSize'], 24)
+        self.assertFalse(self.api.settings[LINKAGE]['reloadChatLine'])
+        self.assertEqual(self.mod._timer.settings['fontSize'], 30)
+
+    def test_turning_the_mod_off_and_on_from_the_page(self):
+        self.start_game()
+        self.change(enabled=False)
+        self.assertEqual(self.guiflash.components, {})
+        self.assertEqual((self.events.onAvatarReady.handlers, self.events.onAvatarBecomeNonPlayer.handlers), ([], []))
+        self.assertEqual(self.press_reload(), ['game reload command'])
+        self.assertFalse(self.saved()['enabled'])
+
+        self.change(enabled=True)
+        self.events.onAvatarReady()
+        self.assertTrue(self.label()['visible'])
+        self.assertTrue(self.aim_parts())
+        self.assertEqual(self.press_reload(), [('Magazine 1/3, full in 15 s', 0)])
+
+    def test_reload_line_follows_the_page_without_a_restart(self):
+        self.start_game({'reloadChatLine': False})
+        self.assertEqual(self.press_reload(), ['game reload command'])
+        self.change(reloadChatLine=True)
+        self.assertEqual(self.press_reload(), [('Magazine 1/3, full in 15 s', 0)])
+        self.change(reloadChatLine=False)
+        self.assertEqual(self.press_reload(), ['game reload command'])
 
 
 if __name__ == '__main__':

@@ -73,10 +73,17 @@ Allies don't get the game's reload icon over your tank or the minimap animation 
 
 1. Install [GUIFlash](https://github.com/CH4MPi/GUIFlash) (`gambiter.guiflash_*.wotmod`). Most modpacks include it.
 2. Copy `maksforge.gunner_hud_<version>.wotmod` into `World_of_Tanks/mods/<game version>/`.
+3. Optional: install ModsSettingsAPI for the [in-game settings](#in-game-settings) page.
 
 ### Upgrading from Autoloader Shell Timer
 
 0.6.0 replaces `maksforge.autoloader_timer_<version>.wotmod`. Delete that file from `mods/<game version>/`, or both mods load and draw everything twice. Your settings carry over: the next game start copies `mods/configs/autoloader_timer/config.json` to the new config path and leaves the old file where it is.
+
+## In-game settings
+
+With [ModsSettingsAPI](https://github.com/IzeBerg/modssettingsapi) (`izeberg.modssettingsapi_*.wotmod`) installed, the mod gets a **Gunner HUD** page in the mods settings window, opened from the mods list button in the garage or on the login screen. ModsSettingsAPI needs ModsList API (`me.poliroid.modslistapi_*.wotmod`); modpacks that include one usually include both. It switches the whole mod, the aim timer, each line, the reload quick command line and Hide when full, and sets the text size (10 to 24).
+
+The page reads and writes `config.json`, so the file stays the one source of truth: a change on the page is saved there at once, and a value you edit in the file shows on the page at the next game start. Every change applies without a restart and shows from your next battle. Without ModsSettingsAPI the mod runs from `config.json` alone, as before.
 
 ## Settings
 
@@ -86,9 +93,12 @@ The game writes `mods/configs/gunner_hud/config.json` the first time it starts w
 | --- | --- | --- |
 | `enabled` | `true` | Turns the mod off without uninstalling it |
 | `x`, `y` | `0`, `60` | The panel's offset from the crosshair, which it follows frame by frame. Once you drag the panel in sniper or artillery view, a `sniper` or `strategic` key with its own `x`, `y` appears; until then that view uses these arcade values. |
-| `fontSize` | `14` | Text size |
+| `fontSize` | `14` | Text size. The settings page offers 10 to 24. |
 | `hideWhenFull` | `false` | Hide the panel while the magazine is full or an Ares gun is cold |
 | `reloadChatLine` | `true` | Replace the reload quick command with the magazine status line in autoreloaders |
+| `autoreloaderLine` | `true` | Show the shell times line on autoreloaders |
+| `magazineLine` | `true` | Show the magazine line on regular autoloaders |
+| `aresLine` | `true` | Show the cooldown and damage line on Ares tanks |
 | `aimTimer` | | `enabled` (`true`) shows the aim timer. `x`, `y` (`150`, `0`) are its offset from the crosshair in arcade view; `sniper` (`120`, `60`) and `strategic` (`180`, `70`) hold the offsets for the zoomed and artillery views. |
 | `colors` | | Hex colours for the count, a full magazine, the loading shell, the queued shells, and the per-shell times. The Ares line and the aim timer's text reuse them. The bar's own colours are built in. |
 

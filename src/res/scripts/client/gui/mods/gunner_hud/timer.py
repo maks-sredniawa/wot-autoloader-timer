@@ -29,15 +29,33 @@ class GunnerHud(object):
         self._factor = 1.0
 
     def start(self):
-        if not self._settings['enabled']:
+        if not self._settings['enabled'] or self._view is not None:
             return
         self._view = PanelView(self._settings, self._on_moved)
-        if self._settings['aimTimer']['enabled']:
-            self._aim_view = AimBarView(self._settings, self._on_moved)
+        self._sync_aim_view()
         g_playerEvents.onAvatarReady += self._on_avatar_ready
         g_playerEvents.onAvatarBecomeNonPlayer += self._on_avatar_left
 
+    def apply_settings(self):
+        if not self._settings['enabled']:
+            self.stop()
+            return
+        self.start()
+        self._sync_aim_view()
+
+    def _sync_aim_view(self):
+        wanted = self._settings['aimTimer']['enabled']
+        if wanted and self._aim_view is None:
+            self._aim_view = AimBarView(self._settings, self._on_moved)
+            if self._crosshair is not None:
+                self._on_crosshair_changed()
+        elif not wanted and self._aim_view is not None:
+            self._aim_view.destroy()
+            self._aim_view = None
+
     def stop(self):
+        if self._view is None:
+            return
         g_playerEvents.onAvatarReady -= self._on_avatar_ready
         g_playerEvents.onAvatarBecomeNonPlayer -= self._on_avatar_left
         self._cancel_tick()
@@ -155,6 +173,8 @@ class GunnerHud(object):
         slots = self.slots()
         if slots is None:
             return self._no_autoreload_segments()
+        if not self._settings['autoreloaderLine']:
+            return None
         if self._settings['hideWhenFull'] and all(slot.state == schedule.LOADED for slot in slots):
             return None
         return format_segments(slots, self._settings, schedule.shell_damage(self._sessionProvider.shared.ammo))
@@ -166,7 +186,7 @@ class GunnerHud(object):
         return self._cooling_segments()
 
     def _magazine_segments(self, ammo):
-        if ammo.getCurrentShellCD() is None:
+        if not self._settings['magazineLine'] or ammo.getCurrentShellCD() is None:
             return None
         shells_total, shells_in_clip = ammo.getCurrentShells()
         if shells_in_clip < 0 or max(shells_total, shells_in_clip) <= 0:
@@ -177,6 +197,8 @@ class GunnerHud(object):
         return format_magazine(shells_in_clip, clip_size, schedule.shell_damage(ammo), self._settings)
 
     def _cooling_segments(self):
+        if not self._settings['aresLine']:
+            return None
         status = gun_cooling.read_status(self._sessionProvider.shared.ammo)
         if status is None or (self._settings['hideWhenFull'] and status.state == gun_cooling.COLD):
             return None

@@ -17,6 +17,9 @@ DEFAULTS = {
     'fontSize': 14,
     'hideWhenFull': False,
     'reloadChatLine': True,
+    'autoreloaderLine': True,
+    'magazineLine': True,
+    'aresLine': True,
     'aimTimer': {
         'enabled': True,
         'x': 150,
