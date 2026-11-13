@@ -512,6 +512,10 @@ class AimTimerTest(_StubbedGameTest):
     def visible(self, name):
         return self.part(name).get('visible')
 
+    def drag(self, alias, x, y):
+        self.guiflash.components[alias].update(x=x, y=y)
+        sys.modules['gui.mods.gambiter.flash'].COMPONENT_EVENT.UPDATED(alias, {'x': x, 'y': y})
+
     def tick(self, angles=None, at=None):
         if angles is not None:
             self.player.gunRotator._VehicleGunRotator__dispersionAngles = angles
@@ -574,18 +578,17 @@ class AimTimerTest(_StubbedGameTest):
     def test_bar_follows_the_crosshair_and_saves_where_it_is_dragged(self):
         self.crosshair.move_to(1300, 700)
         self.assertEqual((self.part('Track')['x'], self.part('Track')['y']), (170, -20))
-        sys.modules['gui.mods.gambiter.flash'].COMPONENT_EVENT.UPDATED('maksforgeAimTimerPercent',
-                                                                       {'x': 200, 'y': 30})
+        self.drag('maksforgeAimTimerPercent', 200, 30)
         self.assertEqual(self.mod._timer.settings['aimTimer']['x'], 180)
         self.assertEqual(self.mod._timer.settings['aimTimer']['y'], 8)
 
     def test_each_view_keeps_its_own_position(self):
-        sys.modules['gui.mods.gambiter.flash'].COMPONENT_EVENT.UPDATED('maksforgeAimTimerTrack', {'x': 120, 'y': 0})
+        self.drag('maksforgeAimTimerTrack', 120, 0)
         self.crosshair.view_id = 2
         self.crosshair.onCrosshairViewChanged(2)
         sniper = self.mod._timer.settings['aimTimer']['sniper']
         self.assertEqual((self.part('Track')['x'], self.part('Track')['y']), (sniper['x'], sniper['y']))
-        sys.modules['gui.mods.gambiter.flash'].COMPONENT_EVENT.UPDATED('maksforgeAimTimerTrack', {'x': 300, 'y': 90})
+        self.drag('maksforgeAimTimerTrack', 300, 90)
         self.assertEqual((sniper['x'], sniper['y']), (300, 90))
         self.crosshair.view_id = 1
         self.crosshair.onCrosshairViewChanged(1)
