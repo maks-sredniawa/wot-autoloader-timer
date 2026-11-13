@@ -1,6 +1,7 @@
 import math
 
-from debug_utils import LOG_CURRENT_EXCEPTION
+import BigWorld
+from debug_utils import LOG_CURRENT_EXCEPTION, LOG_NOTE
 from gui.battle_control import avatar_getter
 from gui.battle_control.controllers.chat_cmd_ctrl import ChatCommandsController
 from messenger.ext import isBattleChatEnabled
@@ -10,6 +11,8 @@ from messenger.proto import proto_getter
 from . import schedule
 
 TEAM_CHANNEL = 0
+# The server appears to drop a team chat line sent in the same instant as a chat command.
+LINE_DELAY_SECONDS = 1.0
 
 
 class _TeamChat(object):
@@ -21,6 +24,7 @@ class _TeamChat(object):
     def try_send(self, text):
         arena_chat = self.proto.arenaChat
         if not isBattleChatEnabled() or arena_chat.isBroadcastInCooldown():
+            LOG_NOTE('[gunner_hud] magazine line skipped: team chat off or in cooldown')
             return False
         arena_chat.broadcast(text, TEAM_CHANNEL)
         return True
@@ -63,11 +67,14 @@ def install(get_slots):
         text = magazine_text(slots) if slots else None
         return bool(text) and team_chat.try_send(text)
 
-    def sendReloadingCommand(self):
-        original(self)
+    def send_magazine_status_safely():
         try:
             send_magazine_status()
         except Exception:
             LOG_CURRENT_EXCEPTION()
+
+    def sendReloadingCommand(self):
+        original(self)
+        BigWorld.callback(LINE_DELAY_SECONDS, send_magazine_status_safely)
 
     ChatCommandsController.sendReloadingCommand = sendReloadingCommand

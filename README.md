@@ -59,7 +59,7 @@ The game doesn't tell the client how long the cooldown is after crew skills, so 
 
 ## Reload quick command
 
-In an autoreloader, the reload quick command (its own key, or Z → "I'm reloading") sends the game's own command as usual, so allies get the reload icon over your tank and the animation on the minimap. Right after it the mod adds one team chat line with the whole magazine, which the game's line can't show because it only knows about the next shell:
+In an autoreloader, the reload quick command (its own key, or Z → "I'm reloading") sends the game's own command as usual, so allies get the reload icon over your tank and the animation on the minimap. About a second later the mod adds one team chat line with the whole magazine, which the game's line can't show because it only knows about the next shell:
 
 ```
 Magazine 1/4, full in 35 s

@@ -239,6 +239,12 @@ class _StubbedGameTest(unittest.TestCase):
 
 class ModSmokeTest(_StubbedGameTest):
 
+    def tick_timer(self):
+        [callback for callback in self.callbacks if getattr(callback, '__name__', None) == '_tick'][-1]()
+
+    def run_delayed(self):
+        [callback for callback in self.callbacks if getattr(callback, '__name__', None) != '_tick'][-1]()
+
     def label(self):
         return self.guiflash.components.get('maksforgeGunnerHud', {})
 
@@ -267,15 +273,18 @@ class ModSmokeTest(_StubbedGameTest):
 
         chat_ctrl = sys.modules['gui.battle_control.controllers.chat_cmd_ctrl'].ChatCommandsController
         chat_ctrl().sendReloadingCommand()
+        self.assertEqual(chat_ctrl.sent, ['game reload command'])
+        self.run_delayed()
         self.assertEqual(chat_ctrl.sent, ['game reload command', ('Magazine 1/3, full in 15 s', 0)])
         chat_ctrl.cooldown = True
         chat_ctrl().sendReloadingCommand()
+        self.run_delayed()
         self.assertEqual(chat_ctrl.sent[-1], 'game reload command')
 
         self.ammo.shells = (30, 3)
         self.ammo.clip_state = FakeState(0.0, 0.0)
         self.ammo.shell_change_time = 6.75
-        self.callbacks[-1]()
+        self.tick_timer()
         text = self.label()['text']
         self.assertIn("<font color='#C7FE48'>3/3</font>", text)
         self.assertTrue(text.endswith("<font color='#C7FE48'>300</font></font>"))
@@ -283,10 +292,11 @@ class ModSmokeTest(_StubbedGameTest):
         self.assertLess(text.index('>11.7<'), text.index('>13.5<'))
         chat_ctrl.cooldown = False
         chat_ctrl().sendReloadingCommand()
+        self.run_delayed()
         self.assertEqual(chat_ctrl.sent[-2:], ['game reload command', ('Magazine 3/3', 0)])
 
         self.ammo.gun.hasAutoReload = lambda: False
-        self.callbacks[-1]()
+        self.tick_timer()
         self.assertFalse(self.label()['visible'])
         mod.fini()
         self.assertEqual(self.guiflash.components, {})
@@ -399,7 +409,11 @@ class ReloadChatTest(_StubbedGameTest):
         self.reload_chat.install(lambda: self.slots)
 
     def press_reload(self):
+        pending = len(self.callbacks)
         self.chat_ctrl().sendReloadingCommand()
+        self.assertEqual(self.chat_ctrl.sent[-1:], ['game reload command'])
+        for delayed in self.callbacks[pending:]:
+            delayed()
         return self.chat_ctrl.sent
 
     def test_empty_magazine_reports_first_shell_and_full_magazine(self):
