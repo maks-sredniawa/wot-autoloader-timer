@@ -5,16 +5,18 @@ from gui.mods.gambiter.flash import COMPONENT_ALIGN, COMPONENT_EVENT, COMPONENT_
 
 from . import aim
 
+# GUIFlash creates battle components in alphabetical order of alias, which is also their stacking order.
 _PREFIX = 'maksforgeAimTimer'
-OUTLINE = _PREFIX + 'Outline'
-TRACK = _PREFIX + 'Track'
-LOCKED = _PREFIX + 'Locked'
-FILL = _PREFIX + 'Fill'
-GAIN = _PREFIX + 'Gain'
-LIMIT = _PREFIX + 'Limit'
-SECONDS = _PREFIX + 'Seconds'
-PERCENT = _PREFIX + 'Percent'
-COOLDOWN = _PREFIX + 'Cooldown'
+OUTLINE = _PREFIX + '0Outline'
+TRACK = _PREFIX + '1Track'
+LOCKED = _PREFIX + '2Locked'
+FILL = _PREFIX + '3Fill'
+GAIN = _PREFIX + '4Gain'
+LIMIT = _PREFIX + '5Limit'
+SECONDS = _PREFIX + '6Seconds'
+PERCENT = _PREFIX + '7Percent'
+COOLDOWN = _PREFIX + '8Cooldown'
+STACKING_ORDER = (OUTLINE, TRACK, LOCKED, FILL, GAIN, LIMIT, SECONDS, PERCENT, COOLDOWN)
 
 TRACK_SIZE = (10, 64)
 FILL_WIDTH = 8

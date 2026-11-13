@@ -506,8 +506,11 @@ class AimTimerTest(_StubbedGameTest):
         self.addCleanup(self.mod.fini)
         self.events.onAvatarReady()
 
+    def alias(self, name):
+        return getattr(sys.modules['gui.mods.autoloader_timer.aim_view'], name.upper())
+
     def part(self, name):
-        return self.guiflash.components['maksforgeAimTimer' + name]
+        return self.guiflash.components[self.alias(name)]
 
     def visible(self, name):
         return self.part(name).get('visible')
@@ -589,22 +592,27 @@ class AimTimerTest(_StubbedGameTest):
     def test_bar_follows_the_crosshair_and_saves_where_it_is_dragged(self):
         self.crosshair.move_to(1300, 700)
         self.assertEqual((self.part('Track')['x'], self.part('Track')['y']), (170, -20))
-        self.drag('maksforgeAimTimerPercent', 200, 30)
+        self.drag(self.alias('Percent'), 200, 30)
         self.assertEqual(self.mod._timer.settings['aimTimer']['x'], 180)
         self.assertEqual(self.mod._timer.settings['aimTimer']['y'], 8)
 
     def test_each_view_keeps_its_own_position(self):
-        self.drag('maksforgeAimTimerTrack', 120, 0)
+        self.drag(self.alias('Track'), 120, 0)
         self.crosshair.view_id = 2
         self.crosshair.onCrosshairViewChanged(2)
         sniper = self.mod._timer.settings['aimTimer']['sniper']
         self.assertEqual((self.part('Track')['x'], self.part('Track')['y']), (sniper['x'], sniper['y']))
-        self.drag('maksforgeAimTimerTrack', 300, 90)
+        self.drag(self.alias('Track'), 300, 90)
         self.assertEqual((sniper['x'], sniper['y']), (300, 90))
         self.crosshair.view_id = 1
         self.crosshair.onCrosshairViewChanged(1)
         self.assertEqual((self.part('Track')['x'], self.part('Track')['y']), (120, 0))
         self.assertEqual(self.mod._timer.settings['aimTimer']['x'], 120)
+
+    def test_alphabetical_creation_order_stacks_the_fill_above_the_track(self):
+        aim_view = sys.modules['gui.mods.autoloader_timer.aim_view']
+        aliases = [alias for alias in self.guiflash.components if alias.startswith('maksforgeAimTimer')]
+        self.assertEqual(tuple(sorted(aliases)), aim_view.STACKING_ORDER)
 
     def test_turned_off_creates_no_bar(self):
         self.mod.fini()
