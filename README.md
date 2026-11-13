@@ -76,10 +76,10 @@ The first battle writes `mods/configs/autoloader_timer/config.json`:
 | `fontSize` | `14` | Text size |
 | `hideWhenFull` | `false` | Hide the panel while the magazine is full or an Ares gun is cold |
 | `reloadChatLine` | `true` | Replace the reload quick command with the magazine status line in autoreloaders |
-| `aimTimer` | | `enabled` (`true`) shows the aim timer. `x`, `y` (`150`, `0`) are its offset from the crosshair. |
+| `aimTimer` | | `enabled` (`true`) shows the aim timer. `x`, `y` (`150`, `0`) are its offset from the crosshair in arcade view; `sniper` (`120`, `60`) and `strategic` (`180`, `70`) hold the offsets for the zoomed and artillery views. |
 | `colors` | | Hex colours for the count, a full magazine, the loading shell, the queued shells, the per-shell times and the accurate mode (`accurate`). The Ares line and the aim timer's text reuse them. The bar's own colours are built in. |
 
-To move the panel or the aim timer, hold Ctrl to show the cursor and drag it (the aim timer by its bar, seconds or percentage). The new position is saved.
+To move the panel or the aim timer, hold Ctrl to show the cursor and drag it (the aim timer by its bar, seconds or percentage). The new position is saved. The aim timer keeps a separate position for arcade, sniper and artillery view, so drag it once in each.
 
 ## Build
 

@@ -100,6 +100,7 @@ class FakeCrosshair(object):
 
     def __init__(self):
         self.position = (1280, 625)
+        self.view_id = 1
         self.onCrosshairPositionChanged = _Event()
         self.onCrosshairSizeChanged = _Event()
         self.onCrosshairScaleChanged = _Event()
@@ -113,6 +114,9 @@ class FakeCrosshair(object):
 
     def getDisaredPosition(self):
         return self.position
+
+    def getViewID(self):
+        return self.view_id
 
     def move_to(self, x, y):
         self.position = (x, y)
@@ -574,6 +578,19 @@ class AimTimerTest(_StubbedGameTest):
                                                                        {'x': 200, 'y': 30})
         self.assertEqual(self.mod._timer.settings['aimTimer']['x'], 180)
         self.assertEqual(self.mod._timer.settings['aimTimer']['y'], 8)
+
+    def test_each_view_keeps_its_own_position(self):
+        sys.modules['gui.mods.gambiter.flash'].COMPONENT_EVENT.UPDATED('maksforgeAimTimerTrack', {'x': 120, 'y': 0})
+        self.crosshair.view_id = 2
+        self.crosshair.onCrosshairViewChanged(2)
+        sniper = self.mod._timer.settings['aimTimer']['sniper']
+        self.assertEqual((self.part('Track')['x'], self.part('Track')['y']), (sniper['x'], sniper['y']))
+        sys.modules['gui.mods.gambiter.flash'].COMPONENT_EVENT.UPDATED('maksforgeAimTimerTrack', {'x': 300, 'y': 90})
+        self.assertEqual((sniper['x'], sniper['y']), (300, 90))
+        self.crosshair.view_id = 1
+        self.crosshair.onCrosshairViewChanged(1)
+        self.assertEqual((self.part('Track')['x'], self.part('Track')['y']), (120, 0))
+        self.assertEqual(self.mod._timer.settings['aimTimer']['x'], 120)
 
     def test_turned_off_creates_no_bar(self):
         self.mod.fini()

@@ -18,6 +18,8 @@ DEFAULTS = {
         'enabled': True,
         'x': 150,
         'y': 0,
+        'sniper': {'x': 120, 'y': 60},
+        'strategic': {'x': 180, 'y': 70},
     },
     'colors': {
         'accurate': '6FD8FF',

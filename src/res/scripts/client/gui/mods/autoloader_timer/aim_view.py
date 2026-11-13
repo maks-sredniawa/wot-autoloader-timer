@@ -29,6 +29,9 @@ _LABEL_OFFSETS = {
     PERCENT: (0, TRACK_SIZE[1] // 2 + LABEL_GAP),
 }
 _DRAGGABLE = (TRACK, SECONDS, PERCENT)
+SNIPER_VIEW = 2
+STRATEGIC_VIEW = 3
+_VIEW_POSITIONS = {SNIPER_VIEW: 'sniper', STRATEGIC_VIEW: 'strategic'}
 
 
 def _image(name):
@@ -58,6 +61,7 @@ class AimBarView(object):
         self._settings = settings
         self._on_moved = on_moved
         self._anchor = (0, 0)
+        self._view_id = None
         self._shown = {}
         self._status = None
         self._fill_image = None
@@ -79,10 +83,11 @@ class AimBarView(object):
             g_guiFlash.deleteComponent(alias)
         self._shown = {}
 
-    def set_anchor(self, x, y):
-        if (x, y) == self._anchor:
+    def set_anchor(self, x, y, view_id=None):
+        if ((x, y), view_id) == (self._anchor, self._view_id):
             return
         self._anchor = (x, y)
+        self._view_id = view_id
         self.show(self._status)
 
     def hide(self):
@@ -142,8 +147,13 @@ class AimBarView(object):
         html = "<font face='$FieldFont' size='%d' color='#%s'>%s</font>" % (size, color, text)
         self._update(alias, {'visible': True, 'text': html, 'x': position[0], 'y': position[1]})
 
+    def _offset(self):
+        settings = self._settings['aimTimer']
+        return settings.get(_VIEW_POSITIONS.get(self._view_id), settings)
+
     def _center(self):
-        return (self._anchor[0] + self._settings['aimTimer']['x'], self._anchor[1] + self._settings['aimTimer']['y'])
+        offset = self._offset()
+        return (self._anchor[0] + offset['x'], self._anchor[1] + offset['y'])
 
     def _label_position(self, alias):
         cx, cy = self._center()
@@ -166,6 +176,7 @@ class AimBarView(object):
             return
         dx, dy = _LABEL_OFFSETS.get(alias, (0, 0))
         self._shown[alias].update(x=props['x'], y=props['y'])
-        self._settings['aimTimer']['x'] = int(props['x']) - dx - self._anchor[0]
-        self._settings['aimTimer']['y'] = int(props['y']) - dy - self._anchor[1]
+        offset = self._offset()
+        offset['x'] = int(props['x']) - dx - self._anchor[0]
+        offset['y'] = int(props['y']) - dy - self._anchor[1]
         self._on_moved()
