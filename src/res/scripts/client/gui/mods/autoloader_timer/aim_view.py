@@ -49,7 +49,7 @@ def format_percent(status):
 
 
 def format_cooldown(status):
-    return None if not status.locked or status.cooldown is None else '%.1f' % status.cooldown
+    return None if not status.locked or status.cooldown is None else '%.1f s' % status.cooldown
 
 
 class AimBarView(object):

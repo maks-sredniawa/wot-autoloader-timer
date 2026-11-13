@@ -551,7 +551,7 @@ class AimTimerTest(_StubbedGameTest):
         dual.active = False
         self.tick([0.5, 0.4, 0.5, 0.24], at=100.0)
         self.tick(at=101.0)
-        self.assertIn("color='#A8A8A8'>3.0<", self.part('Cooldown')['text'])
+        self.assertIn("color='#A8A8A8'>3.0 s<", self.part('Cooldown')['text'])
         self.assertIn("color='#FCAF1A'>80%<", self.part('Percent')['text'])
         self.assertEqual(self.part('Limit')['y'], int(round(31 - 62 * 0.6)))
         self.assertTrue(self.visible('Locked'))
@@ -568,7 +568,7 @@ class AimTimerTest(_StubbedGameTest):
         dual.active = False
         self.tick([0.5, 0.4, 0.5, 0.24], at=110.0)
         self.tick(at=111.0)
-        self.assertIn('>2.5<', self.part('Cooldown')['text'])
+        self.assertIn('>2.5 s<', self.part('Cooldown')['text'])
 
     def test_dead_tank_hides_the_bar(self):
         self.player.isVehicleAlive = False
